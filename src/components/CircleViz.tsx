@@ -1,6 +1,7 @@
-import { For, Show, createSignal, onMount, onCleanup, type Component } from "solid-js";
+import { For, Show, createSignal, createMemo, onMount, onCleanup, type Component } from "solid-js";
 import type { Store } from "../state/store";
 import { destCents, noteName } from "../utils/cents";
+import { findCollisions } from "../mapping/deviation";
 
 interface Props { store: Store; }
 
@@ -28,6 +29,17 @@ export const CircleViz: Component<Props> = (props) => {
   const source = () => props.store.sourceScale();
   const sourceCents = () => props.store.sourceCents();
   const [hovered, setHovered] = createSignal<{ x: number; y: number; text: string } | null>(null);
+
+  const collisionDegrees = createMemo(() => {
+    const cols = findCollisions(props.store.mapping());
+    return new Set(cols.map((c) => c.sourceDegree));
+  });
+  const collidingKeys = createMemo(() => {
+    const cols = findCollisions(props.store.mapping());
+    const keys = new Set<number>();
+    for (const c of cols) for (const k of c.destKeys) keys.add(k);
+    return keys;
+  });
 
   onMount(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") props.store.cancelConnect(); };
@@ -95,6 +107,8 @@ export const CircleViz: Component<Props> = (props) => {
                 cx={dotX(deg.cents, R_OUTER)} cy={dotY(deg.cents, R_OUTER)}
                 r={isMapped ? 5 : 3.5}
                 fill={isMapped ? "#3b82f6" : "#bbb"}
+                stroke={collisionDegrees().has(deg.degree) ? "#ef4444" : "none"}
+                stroke-width={collisionDegrees().has(deg.degree) ? 2 : 0}
                 style={{ cursor: "pointer" }}
                 onClick={() => props.store.completeConnect({ kind: "outer", degree: deg.degree })}
                 onMouseOver={() => {
@@ -122,7 +136,7 @@ export const CircleViz: Component<Props> = (props) => {
                   data-key={dot.key}
                   cx={dot.x} cy={dot.y}
                   r={isSelected ? 9 : 7}
-                  fill={isSelected ? "#ef4444" : "#1d4ed8"}
+                  fill={collidingKeys().has(dot.key) ? "#ef4444" : isSelected ? "#ef4444" : "#1d4ed8"}
                   stroke={isSelected ? "#fff" : "none"}
                   stroke-width="2"
                   style={{ cursor: "pointer" }}
