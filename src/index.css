@@ -5,3 +5,154 @@
 body {
   margin: 0;
 }
+
+/* TopBar */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f8f8f8;
+}
+
+.topbar-title {
+  font-size: 0.9375rem;
+  font-weight: bold;
+}
+
+.topbar-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.topbar-actions button {
+  padding: 0.375rem 0.875rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  background: #fff;
+}
+
+.topbar-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* SidePanel */
+.side-panel {
+  width: 250px;
+  border-left: 1px solid #e0e0e0;
+  padding: 1rem;
+  background: #fff;
+}
+
+.side-panel .label {
+  font-size: 0.625rem;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.side-panel section {
+  margin-bottom: 0.5rem;
+}
+
+.side-panel hr {
+  border: none;
+  border-top: 1px solid #f0f0f0;
+  margin: 0.5rem 0;
+}
+
+/* PreviewBox */
+.preview-box {
+  border-top: 1px solid #e0e0e0;
+  background: #f8f8f8;
+  padding: 0.75rem 1rem;
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.preview-title {
+  font-size: 0.6875rem;
+  color: #666;
+  font-weight: bold;
+}
+
+.preview-toggle button {
+  padding: 0.1875rem 0.5625rem;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.625rem;
+  background: #fff;
+}
+
+.preview-toggle button.active {
+  background: #3b82f6;
+  color: #fff;
+  border-color: #3b82f6;
+}
+
+.preview-readable, .preview-raw {
+  margin: 0;
+  background: #1e1e2e;
+  color: #e0e0e0;
+  padding: 0.75rem 0.875rem;
+  border-radius: 5px;
+  font-family: Menlo, monospace;
+  font-size: 0.75rem;
+  line-height: 1.65;
+  white-space: pre;
+  overflow: auto;
+}
+
+/* Legend */
+.legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  border-top: 1px solid #e0e0e0;
+  background: #f8f8f8;
+  font-size: 0.625rem;
+  color: #666;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.legend-dot-sm {
+  width: 7px;
+  height: 7px;
+}
+
+.legend-line {
+  display: inline-block;
+  width: 14px;
+  height: 2px;
+}
+
+/* Circle placeholder */
+.circle-placeholder {
+  color: #999;
+  font-size: 0.875rem;
+}
