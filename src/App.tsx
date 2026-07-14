@@ -25,6 +25,7 @@ const App: Component = () => {
     const key = store.selectedKey();
     if (key === null) return;
     const s = getSynth();
+    s.setWaveform(store.waveform());
     void s.resume();
     if (kind === "remapped") {
       const a = store.mapping().assignments[key];
