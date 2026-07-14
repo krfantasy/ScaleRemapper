@@ -1,4 +1,4 @@
-import { For, Show, type Component } from "solid-js";
+import { For, Show, onMount, onCleanup, type Component } from "solid-js";
 import type { Store } from "../state/store";
 import { destCents, noteName } from "../utils/cents";
 
@@ -27,6 +27,12 @@ function deviationColor(dev: number): string {
 export const CircleViz: Component<Props> = (props) => {
   const source = () => props.store.sourceScale();
   const sourceCents = () => props.store.sourceCents();
+
+  onMount(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") props.store.cancelConnect(); };
+    window.addEventListener("keydown", onKey);
+    onCleanup(() => window.removeEventListener("keydown", onKey));
+  });
 
   const innerDots = Array.from({ length: 12 }, (_, k) => ({
     key: k,
@@ -87,6 +93,8 @@ export const CircleViz: Component<Props> = (props) => {
                 cx={dotX(deg.cents, R_OUTER)} cy={dotY(deg.cents, R_OUTER)}
                 r={isMapped ? 5 : 3.5}
                 fill={isMapped ? "#3b82f6" : "#bbb"}
+                style={{ cursor: "pointer" }}
+                onClick={() => props.store.completeConnect({ kind: "outer", degree: deg.degree })}
               />
             );
           }}
@@ -106,7 +114,7 @@ export const CircleViz: Component<Props> = (props) => {
                   stroke={isSelected ? "#fff" : "none"}
                   stroke-width="2"
                   style={{ cursor: "pointer" }}
-                  onClick={() => props.store.selectKey(dot.key)}
+                  onClick={() => props.store.completeConnect({ kind: "inner", key: dot.key })}
                 />
                 <text
                   x={dot.x} y={dot.y + 3}
