@@ -156,3 +156,18 @@ body {
   color: #999;
   font-size: 0.875rem;
 }
+
+/* Circle hover tooltip */
+.circle-tooltip {
+  position: absolute;
+  background: #1a1a2e;
+  color: #fff;
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-family: monospace;
+  pointer-events: none;
+  transform: translate(-50%, -130%);
+  white-space: nowrap;
+  z-index: 10;
+}

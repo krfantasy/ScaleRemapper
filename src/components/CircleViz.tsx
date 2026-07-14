@@ -1,4 +1,4 @@
-import { For, Show, onMount, onCleanup, type Component } from "solid-js";
+import { For, Show, createSignal, onMount, onCleanup, type Component } from "solid-js";
 import type { Store } from "../state/store";
 import { destCents, noteName } from "../utils/cents";
 
@@ -27,6 +27,7 @@ function deviationColor(dev: number): string {
 export const CircleViz: Component<Props> = (props) => {
   const source = () => props.store.sourceScale();
   const sourceCents = () => props.store.sourceCents();
+  const [hovered, setHovered] = createSignal<{ x: number; y: number; text: string } | null>(null);
 
   onMount(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") props.store.cancelConnect(); };
@@ -44,6 +45,7 @@ export const CircleViz: Component<Props> = (props) => {
 
   return (
     <Show when={source()} fallback={<div class="circle-placeholder">Load a scale to begin</div>}>
+      <div style={{ position: "relative", display: "inline-block" }}>
       <svg viewBox="0 0 400 400" class="circle-svg" style={{ "max-width": "440px", width: "100%" }}>
         <For each={Array.from({ length: 12 }, (_, i) => i * 30)}>
           {(deg) => {
@@ -95,6 +97,16 @@ export const CircleViz: Component<Props> = (props) => {
                 fill={isMapped ? "#3b82f6" : "#bbb"}
                 style={{ cursor: "pointer" }}
                 onClick={() => props.store.completeConnect({ kind: "outer", degree: deg.degree })}
+                onMouseOver={() => {
+                  const usedBy = props.store.mapping().assignments
+                    .filter((a) => a?.sourceDegree === deg.degree)
+                    .map((a) => a!.destKey);
+                  setHovered({
+                    x: dotX(deg.cents, R_OUTER), y: dotY(deg.cents, R_OUTER),
+                    text: `deg ${deg.degree} · ${deg.cents.toFixed(1)}¢${usedBy.length ? ` · used by key(s) ${usedBy.join(", ")}` : ""}`,
+                  });
+                }}
+                onMouseOut={() => setHovered(null)}
               />
             );
           }}
@@ -115,6 +127,18 @@ export const CircleViz: Component<Props> = (props) => {
                   stroke-width="2"
                   style={{ cursor: "pointer" }}
                   onClick={() => props.store.completeConnect({ kind: "inner", key: dot.key })}
+                  onMouseOver={() => {
+                    const a = props.store.mapping().assignments[dot.key];
+                    const cents = a ? props.store.sourceCents()[a.sourceDegree] : null;
+                    const dev = cents !== null ? cents - destCents(dot.key) : null;
+                    setHovered({
+                      x: dot.x, y: dot.y,
+                      text: dev !== null
+                        ? `${dot.name} → deg ${a!.sourceDegree} (${cents!.toFixed(1)}¢) dev ${dev > 0 ? "+" : ""}${dev.toFixed(1)}¢`
+                        : `${dot.name} (unmapped)`,
+                    });
+                  }}
+                  onMouseOut={() => setHovered(null)}
                 />
                 <text
                   x={dot.x} y={dot.y + 3}
@@ -127,6 +151,17 @@ export const CircleViz: Component<Props> = (props) => {
           }}
         </For>
       </svg>
+      <Show when={hovered()}>
+        {(h) => (
+          <div class="circle-tooltip" style={{
+            left: `${(h().x / 400) * 100}%`,
+            top: `${(h().y / 400) * 100}%`,
+          }}>
+            {h().text}
+          </div>
+        )}
+      </Show>
+      </div>
     </Show>
   );
 };
