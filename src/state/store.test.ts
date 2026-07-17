@@ -68,6 +68,27 @@ describe("store", () => {
     });
   });
 
+  test("disconnect clears a single assignment, leaving others intact", () => {
+    withStore((s) => {
+      s.loadScale(EDO19_SCL);
+      s.connect(3, 5);
+      s.connect(7, 11);
+      s.disconnect(3);
+      expect(s.mapping().assignments[3]).toBeNull();
+      expect(s.mapping().assignments[7]?.sourceDegree).toBe(11);
+    });
+  });
+
+  test("disconnect on an already-null key is a no-op", () => {
+    withStore((s) => {
+      s.loadScale(EDO19_SCL);
+      s.connect(3, 5);
+      const before = s.mapping();
+      s.disconnect(7);
+      expect(s.mapping()).toBe(before);
+    });
+  });
+
   test("clearMapping resets to 12 nulls", () => {
     withStore((s) => {
       s.loadScale(EDO19_SCL);

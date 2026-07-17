@@ -14,9 +14,6 @@ export function createStore() {
   const [sourceScale, setSourceScale] = createSignal<SourceScale | null>(null);
   const [mapping, setMapping] = createSignal<Mapping>({ assignments: [...EMPTY_MAPPING.assignments] });
   const [selectedKey, setSelectedKey] = createSignal<number | null>(null);
-  const [connectOrigin, setConnectOrigin] = createSignal<
-    { kind: "inner"; key: number } | { kind: "outer"; degree: number } | null
-  >(null);
   const [waveform, setWaveform] = createSignal<Waveform>("sine");
 
   // Derived: source cents array (or empty if no scale loaded)
@@ -49,6 +46,15 @@ export function createStore() {
     });
   }
 
+  function disconnect(destKey: number): void {
+    setMapping((prev) => {
+      if (prev.assignments[destKey] === null) return prev;
+      const assignments = [...prev.assignments];
+      assignments[destKey] = null;
+      return { assignments };
+    });
+  }
+
   function clearMapping(): void {
     setMapping({ assignments: [...EMPTY_MAPPING.assignments] });
     setSelectedKey(null);
@@ -62,51 +68,20 @@ export function createStore() {
     setSelectedKey(null);
   }
 
-  function completeConnect(target: { kind: "inner"; key: number } | { kind: "outer"; degree: number }): void {
-    const origin = connectOrigin();
-    if (!origin) {
-      // No origin yet: this click starts a new connect.
-      setConnectOrigin(target);
-      if (target.kind === "inner") setSelectedKey(target.key);
-      return;
-    }
-    if (origin.kind === target.kind) {
-      // Same ring: re-anchor to the new dot.
-      setConnectOrigin(target);
-      if (target.kind === "inner") setSelectedKey(target.key);
-      return;
-    }
-    // Origin and target are on different rings: form the connection.
-    const innerKey = origin.kind === "inner" ? origin.key : (target.kind === "inner" ? target.key : -1);
-    const outerDegree = origin.kind === "outer" ? origin.degree : (target.kind === "outer" ? target.degree : -1);
-    if (innerKey >= 0 && outerDegree >= 0) {
-      connect(innerKey, outerDegree);
-    }
-    setConnectOrigin(null);
-    setSelectedKey(null);
-  }
-
-  function cancelConnect(): void {
-    setConnectOrigin(null);
-    setSelectedKey(null);
-  }
-
   return {
     sourceScale,
     sourceCents,
     mapping,
     selectedKey,
-    connectOrigin,
     waveform,
     stats,
     loadScale,
     runAutoMap,
     connect,
+    disconnect,
     clearMapping,
     selectKey,
     clearSelection,
-    completeConnect,
-    cancelConnect,
     setWaveform,
   };
 }

@@ -41,12 +41,14 @@ describe("CircleViz", () => {
     expect(getByText(/load a scale/i)).toBeTruthy();
   });
 
-  test("renders outer dots for 19-EDO", () => {
+  test("renders outer dots for 19-EDO (octave repeat skipped)", () => {
     const store = setupStore();
     store.loadScale(EDO19_SCL);
     const { container } = render(() => <CircleViz store={store} />);
     const outerDots = container.querySelectorAll('[data-ring="outer"]');
-    expect(outerDots.length).toBe(20); // 19 entries + synthetic root
+    // 19 entries + synthetic root = 20, minus the 2/1 octave repeat (same
+    // pitch class as the root, overlaps it at the top) = 19 shown.
+    expect(outerDots.length).toBe(19);
   });
 
   test("renders 12 inner dots", () => {
@@ -66,12 +68,51 @@ describe("CircleViz", () => {
     expect(connectors.length).toBe(12);
   });
 
-  test("clicking an inner dot selects it", () => {
+  test("clicking (pointer down+up without moving) an inner dot selects it", () => {
     const store = setupStore();
     store.loadScale(EDO19_SCL);
     const { container } = render(() => <CircleViz store={store} />);
     const innerDots = container.querySelectorAll('[data-ring="inner"]');
-    fireEvent.click(innerDots[0]);
-    expect(store.selectedKey()).not.toBeNull();
+    fireEvent.pointerDown(innerDots[0], { clientX: 0, clientY: 0 });
+    fireEvent.pointerUp(window, { clientX: 0, clientY: 0 });
+    expect(store.selectedKey()).toBe(0);
+  });
+
+  test("connectors carry data-key and a double-click hit area", () => {
+    const store = setupStore();
+    store.loadScale(EDO19_SCL);
+    store.runAutoMap();
+    const { container } = render(() => <CircleViz store={store} />);
+    const hits = container.querySelectorAll('[data-role="connector-hit"]');
+    expect(hits.length).toBe(12);
+    // Every hit line carries the dest key it would disconnect.
+    expect(hits[0].getAttribute("data-key")).not.toBeNull();
+  });
+
+  test("double-clicking a connector hit line disconnects that key", () => {
+    const store = setupStore();
+    store.loadScale(EDO19_SCL);
+    store.runAutoMap();
+    const { container } = render(() => <CircleViz store={store} />);
+    const hits = container.querySelectorAll('[data-role="connector-hit"]');
+    const key = Number(hits[0].getAttribute("data-key"));
+    expect(store.mapping().assignments[key]).not.toBeNull();
+    fireEvent.dblClick(hits[0]);
+    expect(store.mapping().assignments[key]).toBeNull();
+  });
+
+  test("renders zoom toolbar with three controls once a scale is loaded", () => {
+    const store = setupStore();
+    store.loadScale(EDO19_SCL);
+    const { getByLabelText } = render(() => <CircleViz store={store} />);
+    expect(getByLabelText(/zoom out/i)).toBeTruthy();
+    expect(getByLabelText(/reset to fit/i)).toBeTruthy();
+    expect(getByLabelText(/zoom in/i)).toBeTruthy();
+  });
+
+  test("placeholder view has no zoom toolbar", () => {
+    const store = setupStore();
+    const { queryByLabelText } = render(() => <CircleViz store={store} />);
+    expect(queryByLabelText(/zoom/i)).toBeNull();
   });
 });

@@ -16,16 +16,20 @@ describe("serializeMappingToScl", () => {
     const sourceCents = [0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100];
     const scl = serializeMappingToScl(mapping, sourceCents, "12-EDO");
     const lines = scl.split("\n");
+    // Per Scala spec: comments, then description (first non-comment), then count.
     expect(lines[0]).toContain("12-EDO");
-    expect(lines[2]).toBe("12");
+    expect(lines[1]).toBe("!");
+    expect(lines[2]).toBe("Remapped from 12-EDO to 12-EDO via Scale Remapper");
+    expect(lines[3]).toBe("12");
     expect(scl).toContain("2/1");
   });
 
-  test("writes cents entries with trailing dot", () => {
+  test("writes cents entries with a decimal point", () => {
     const mapping = makeMapping([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     const sourceCents = [0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100];
     const scl = serializeMappingToScl(mapping, sourceCents, "test");
-    const entryLines = scl.split("\n").filter((l) => /^\d+\.\d+\./.test(l));
+    // A cents value is identified by containing a period (Scala spec).
+    const entryLines = scl.split("\n").filter((l) => /^\d+\.\d+$/.test(l.trim()));
     expect(entryLines).toHaveLength(11);
   });
 
@@ -47,7 +51,7 @@ describe("serializeMappingToScl", () => {
     const mapping = makeMapping([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     const sourceCents = [0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100];
     const scl = serializeMappingToScl(mapping, sourceCents, "test");
-    const entryLines = scl.split("\n").filter((l) => /^\d+\.\d+\.|^2\/1$/.test(l.trim()));
+    const entryLines = scl.split("\n").filter((l) => /^\d+\.\d+$|^2\/1$/.test(l.trim()));
     expect(entryLines).toHaveLength(12);
   });
 });

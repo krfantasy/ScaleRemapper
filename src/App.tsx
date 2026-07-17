@@ -58,12 +58,14 @@ const App: Component = () => {
       <TopBar store={store} onSave={handleSave} />
       <div class={styles.main}>
         <div class={styles.circleArea}>
-          <CircleViz store={store} />
+          <div class={styles.circleStage}>
+            <CircleViz store={store} />
+          </div>
+          <Legend />
         </div>
         <SidePanel store={store} onAudition={handleAudition} />
       </div>
       <PreviewBox store={store} />
-      <Legend />
     </div>
   );
 };

@@ -7,14 +7,21 @@
 
 .main {
   display: flex;
-  min-height: 420px;
+  flex: 1;
+  min-height: 480px;
 }
 
 .circleArea {
   flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
+  flex-direction: column;
+  min-width: 0;
   background: #fafafa;
+}
+
+.circleStage {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
 }

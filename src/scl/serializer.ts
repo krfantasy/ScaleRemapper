@@ -26,6 +26,7 @@ export function serializeMappingToScl(
   return [
     `! Remapped from ${sourceName} to 12-EDO via Scale Remapper`,
     `!`,
+    `Remapped from ${sourceName} to 12-EDO via Scale Remapper`,
     `12`,
     ...entries,
   ].join("\n");
@@ -35,5 +36,5 @@ function formatCents(cents: number): string {
   const rounded = Math.round(cents * 1e6) / 1e6;
   let str = rounded.toFixed(6);
   str = str.replace(/0+$/, "").replace(/\.$/, ".0");
-  return `${str}.`;
+  return `${str}`;
 }
