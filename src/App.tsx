@@ -7,7 +7,7 @@ import { SidePanel } from "./components/SidePanel";
 import { PreviewBox } from "./components/PreviewBox";
 import { Legend } from "./components/Legend";
 import { serializeMappingToScl } from "./scl/serializer";
-import { destCents } from "./utils/cents";
+import { sanitizeScaleName } from "./scl/edo";
 import styles from "./App.module.css";
 
 const App: Component = () => {
@@ -21,35 +21,34 @@ const App: Component = () => {
     return synth;
   }
 
-  function handleAudition(kind: "remapped" | "edo12") {
-    const key = store.selectedKey();
-    if (key === null) return;
+  function handleAudition(kind: "remapped" | "b") {
+    const sel = store.selected();
+    if (!sel || sel.ring !== "B") return; // only B-dots have a "remapped vs B-pure" A/B
+    const bDegree = sel.degree;
     const s = getSynth();
     s.setWaveform(store.waveform());
     void s.resume();
     if (kind === "remapped") {
-      const a = store.mapping().assignments[key];
+      const a = store.mapping().assignments[bDegree];
       if (!a) return;
-      s.playNote(store.sourceCents()[a.sourceDegree]);
+      s.playNote(store.aCents()[a.aDegree]);
     } else {
-      s.playNote(destCents(key));
+      s.playNote(store.bCents()[bDegree]);
     }
   }
 
   function handleSave() {
-    const scale = store.sourceScale();
-    if (!scale || store.stats().mappedCount !== 12) return;
-    const sclText = serializeMappingToScl(
-      store.mapping(),
-      scale.degrees.map((d) => d.cents),
-      scale.description,
-    );
+    const a = store.scaleA();
+    const b = store.scaleB();
+    if (!a) return;
+    if (store.stats().mappedCount !== store.bCents().length - 1) return;
+    const sclText = serializeMappingToScl(store.mapping(), store.aCents(), b, a.name);
     const blob = new Blob([sclText], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${scale.description.replace(/[^a-z0-9]/gi, "_")}-remapped-12.scl`;
-    a.click();
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${sanitizeScaleName(a.name)}-onto-${sanitizeScaleName(b.name)}.scl`;
+    link.click();
     URL.revokeObjectURL(url);
   }
 
