@@ -1,68 +1,60 @@
-import { describe, test, expect } from "vitest";
-import { render } from "@solidjs/testing-library";
-import { createRoot } from "solid-js";
+import { describe, test, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@solidjs/testing-library";
 import { SidePanel } from "./SidePanel";
 import { createStore } from "../state/store";
 
-function setupStore() {
-  let store!: ReturnType<typeof createStore>;
-  createRoot(() => { store = createStore(); });
-  return store;
-}
-
-const EDO19_SCL = `19edo
-19
-63.1578947368421
-126.315789473684
-189.473684210526
-252.631578947368
-315.789473684211
-378.947368421053
-442.105263157895
-505.263157894737
-568.421052631579
-631.578947368421
-694.736842105263
-757.894736842105
-821.052631578947
-884.210526315789
-947.368421052632
-1010.52631578947
-1073.68421052632
-1136.84210526316
-2/1`;
+const EDO12_A = `! a.scl\nA Scale\n12\n${Array.from({ length: 11 }, (_, i) => `${(i + 1) * 100}.0.`).join("\n")}\n2/1`;
 
 describe("SidePanel", () => {
-  test("shows placeholder when no scale", () => {
-    const store = setupStore();
-    const { getByText } = render(() => <SidePanel store={store} onAudition={() => {}} />);
-    expect(getByText(/no scale/i)).toBeTruthy();
+  test("shows 'No scale loaded' when A is null", () => {
+    const store = createStore();
+    render(() => <SidePanel store={store} onAudition={() => {}} />);
+    expect(screen.getByText(/no scale loaded/i)).toBeInTheDocument();
   });
 
-  test("shows source scale info when loaded", () => {
-    const store = setupStore();
-    store.loadScale(EDO19_SCL);
-    const { getByText } = render(() => <SidePanel store={store} onAudition={() => {}} />);
-    expect(getByText("19")).toBeTruthy();
+  test("after loading A, shows Scale A section with note count and period", () => {
+    const store = createStore();
+    store.loadScaleA(EDO12_A, "A Scale");
+    render(() => <SidePanel store={store} onAudition={() => {}} />);
+    expect(screen.getByText("A Scale")).toBeInTheDocument();
+    // Note count and period each appear twice (Scale A is 12-EDO; Scale B defaults
+    // to 12-EDO), and the number is wrapped in <strong>, so match against each
+    // candidate node's normalized textContent rather than a plain regex.
+    const matches = (re: RegExp) =>
+      screen.getAllByText((_, node) => !!node?.textContent && re.test(node.textContent));
+    expect(matches(/12 notes/i).length).toBeGreaterThanOrEqual(1);
+    expect(matches(/2\/1/i).length).toBeGreaterThanOrEqual(1);
   });
 
-  test("shows audition buttons and waveform select", () => {
-    const store = setupStore();
-    store.loadScale(EDO19_SCL);
-    const { getByText, container } = render(() => <SidePanel store={store} onAudition={() => {}} />);
-    expect(getByText(/remapped/i)).toBeTruthy();
-    expect(getByText(/12-edo/i)).toBeTruthy();
-    const select = container.querySelector("select");
-    expect(select).toBeTruthy();
-    expect(select!.options.length).toBe(4);
+  test("Scale B section shows '12-EDO' with 12 notes by default", () => {
+    const store = createStore();
+    store.loadScaleA(EDO12_A, "A Scale");
+    render(() => <SidePanel store={store} onAudition={() => {}} />);
+    expect(screen.getAllByText("12-EDO").length).toBeGreaterThan(0);
   });
 
-  test("shows stats section", () => {
-    const store = setupStore();
-    store.loadScale(EDO19_SCL);
+  test("audition B button label uses scaleB.name", () => {
+    const store = createStore();
+    store.loadScaleA(EDO12_A, "A Scale");
+    render(() => <SidePanel store={store} onAudition={() => {}} />);
+    expect(screen.getByRole("button", { name: /▶ 12-edo/i })).toBeInTheDocument();
+  });
+
+  test("stats show mapped count out of B mappable degrees (12/12 after autoMap)", () => {
+    const store = createStore();
+    store.loadScaleA(EDO12_A, "A Scale");
     store.runAutoMap();
-    const { getByText } = render(() => <SidePanel store={store} onAudition={() => {}} />);
-    expect(getByText(/mapped:/i)).toBeTruthy();
-    expect(getByText(/collision/i)).toBeTruthy();
+    render(() => <SidePanel store={store} onAudition={() => {}} />);
+    expect(screen.getByText(/12\/12/i)).toBeInTheDocument();
+  });
+
+  test("clicking Remapped fires onAudition('remapped')", () => {
+    const store = createStore();
+    store.loadScaleA(EDO12_A, "A Scale");
+    store.select("B", 0);
+    const spy = vi.fn();
+    render(() => <SidePanel store={store} onAudition={spy} />);
+    fireEvent.click(screen.getByRole("button", { name: /remapped/i }));
+    expect(spy).toHaveBeenCalledWith("remapped");
   });
 });
