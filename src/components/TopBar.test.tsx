@@ -15,9 +15,10 @@ describe("TopBar", () => {
   test("Scale B group shows '12-EDO' initially, no reset chip", () => {
     const store = createStore();
     render(() => <TopBar store={store} onSave={() => {}} />);
-    // B name renders as "12-EDO"; the EDO dropdown also contains a "12-EDO"
-    // option, so use getAllByText to assert the name is present.
-    expect(screen.getAllByText("12-EDO").length).toBeGreaterThan(0);
+    // B name renders as "12-EDO"; scope to the B-group's .scale-name span
+    // (the second one — index 0 is the A group's "No source loaded").
+    const bName = document.querySelectorAll(".scale-name")[1];
+    expect(bName?.textContent).toBe("12-EDO");
     expect(screen.queryByTitle(/reset to 12-edo/i)).toBeNull();
   });
 
