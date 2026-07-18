@@ -1,75 +1,81 @@
-import { destCents } from "../utils/cents";
 import type { Collision, Mapping, MappingStats, TieResult } from "./types";
 
-/** Signed deviation for a dest key: sourceCents[mapping] − destCents[key]. Undefined if unmapped. */
-export function computeDeviation(mapping: Mapping, sourceCents: number[], destKey: number): number | undefined {
-  const a = mapping.assignments[destKey];
+/** Signed deviation for a B-degree: aCents[assignment.aDegree] - bCents[bDegree]. Undefined if unmapped. */
+export function computeDeviation(
+  mapping: Mapping,
+  aCents: number[],
+  bCents: number[],
+  bDegree: number,
+): number | undefined {
+  const a = mapping.assignments[bDegree];
   if (!a) return undefined;
-  return sourceCents[a.sourceDegree] - destCents(destKey);
+  return aCents[a.aDegree] - bCents[bDegree];
 }
 
-/** Find all collision groups (source degrees mapped by >1 dest key). */
+/** Find all collision groups (A-degrees mapped by >1 B-degree). For A→B this is the
+ *  expected "collapse" case when A is sparser than B; flagged, not an error. */
 export function findCollisions(mapping: Mapping): Collision[] {
   const byDegree = new Map<number, number[]>();
   for (const a of mapping.assignments) {
     if (!a) continue;
-    const arr = byDegree.get(a.sourceDegree) ?? [];
-    arr.push(a.destKey);
-    byDegree.set(a.sourceDegree, arr);
+    const arr = byDegree.get(a.aDegree) ?? [];
+    arr.push(a.bDegree);
+    byDegree.set(a.aDegree, arr);
   }
   const collisions: Collision[] = [];
-  for (const [sourceDegree, destKeys] of byDegree) {
-    if (destKeys.length > 1) collisions.push({ sourceDegree, destKeys });
+  for (const [aDegree, bDegrees] of byDegree) {
+    if (bDegrees.length > 1) collisions.push({ aDegree, bDegrees });
   }
-  return collisions.sort((a, b) => a.sourceDegree - b.sourceDegree);
+  return collisions.sort((a, b) => a.aDegree - b.aDegree);
 }
 
-/**
- * Find dest keys whose chosen source degree has an equidistant alternative.
- * A tie exists when two source degrees are exactly equidistant from the dest key.
- */
-export function findTies(mapping: Mapping, sourceCents: number[]): TieResult[] {
+/** Find B-degrees whose chosen A-degree has an equidistant alternative in A. */
+export function findTies(mapping: Mapping, aCents: number[], bCents: number[]): TieResult[] {
   const ties: TieResult[] = [];
-  for (let key = 0; key < 12; key++) {
-    const a = mapping.assignments[key];
+  for (let b = 0; b < mapping.assignments.length; b++) {
+    const a = mapping.assignments[b];
     if (!a) continue;
-    const target = destCents(key);
-    const chosenDist = Math.abs(sourceCents[a.sourceDegree] - target);
-    // Find another degree at equal distance
+    const target = bCents[b];
+    const chosenDist = Math.abs(aCents[a.aDegree] - target);
     let alt: number | null = null;
-    for (let d = 0; d < sourceCents.length; d++) {
-      if (d === a.sourceDegree) continue;
-      if (Math.abs(Math.abs(sourceCents[d] - target) - chosenDist) < 1e-9) {
+    for (let d = 0; d < aCents.length; d++) {
+      if (d === a.aDegree) continue;
+      if (Math.abs(Math.abs(aCents[d] - target) - chosenDist) < 1e-9) {
         alt = d;
         break;
       }
     }
     if (alt !== null) {
-      ties.push({ destKey: key, chosenDegree: a.sourceDegree, tieAltDegree: alt });
+      ties.push({ bDegree: b, chosenADegree: a.aDegree, tieAltADegree: alt });
     }
   }
   return ties;
 }
 
-/** Compute aggregate mapping stats. */
-export function computeStats(mapping: Mapping, sourceCents: number[]): MappingStats {
+/** Compute aggregate mapping stats. `collapses` = B-degrees involved in any collision. */
+export function computeStats(mapping: Mapping, aCents: number[], bCents: number[]): MappingStats {
+  // B's mappable degree count = bCents.length - 1 (B's last degree is its period).
+  const bMappable = Math.max(0, bCents.length - 1);
   let mappedCount = 0;
   let totalError = 0;
   let maxError = 0;
-  for (let key = 0; key < 12; key++) {
-    const dev = computeDeviation(mapping, sourceCents, key);
+  for (let b = 0; b < mapping.assignments.length; b++) {
+    const dev = computeDeviation(mapping, aCents, bCents, b);
     if (dev === undefined) continue;
     mappedCount++;
     const abs = Math.abs(dev);
     totalError += abs;
     if (abs > maxError) maxError = abs;
   }
+  const collisions = findCollisions(mapping);
+  const collapses = collisions.reduce((sum, c) => sum + c.bDegrees.length, 0);
   return {
     mappedCount,
-    unmappedCount: 12 - mappedCount,
+    unmappedCount: bMappable - mappedCount,
+    collapses,
     avgError: mappedCount > 0 ? totalError / mappedCount : 0,
     maxError,
-    collisions: findCollisions(mapping).length,
-    ties: findTies(mapping, sourceCents).length,
+    collisions: collisions.length,
+    ties: findTies(mapping, aCents, bCents).length,
   };
 }

@@ -2,90 +2,86 @@ import { describe, test, expect } from "vitest";
 import { computeDeviation, findCollisions, findTies, computeStats } from "./deviation";
 import type { Mapping } from "./types";
 
-function makeMapping(degrees: (number | null)[]): Mapping {
-  return {
-    assignments: degrees.map((deg, i) =>
-      deg === null ? null : { destKey: i, sourceDegree: deg },
-    ),
-  };
+const A = [0, 100, 200, 300, 1200];   // A: root + 3 notes + period
+const B = [0, 100, 200, 1200];        // B: root + 2 notes + period (3 mappable degrees)
+
+function mappingOf(...pairs: ([number, number] | null)[]): Mapping {
+  return { assignments: pairs.map((p) => (p === null ? null : { bDegree: p[0], aDegree: p[1] })) };
 }
 
-describe("computeDeviation", () => {
-  test("exact match has 0 deviation", () => {
-    const mapping = makeMapping([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
-    const sourceCents = [0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100];
-    expect(computeDeviation(mapping, sourceCents, 5)).toBe(0);
+describe("computeDeviation(mapping, aCents, bCents, bDegree)", () => {
+  test("returns aCents[a] - bCents[b] for a mapped B-degree", () => {
+    const m = mappingOf([0, 0], [1, 1], [2, 2]); // B1→A1, B2→A2
+    expect(computeDeviation(m, A, B, 1)).toBeCloseTo(0, 5);
+    expect(computeDeviation(m, A, B, 2)).toBeCloseTo(0, 5);
   });
 
-  test("positive deviation (source sharper)", () => {
-    // key 1 (100¢) -> degree 2 at 126.316¢ → +26.316
-    const mapping = makeMapping([0, 2, 3, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
-    const sourceCents = [0, 63, 126, 189, 252, 315, 378, 442, 505, 568, 631, 694];
-    expect(computeDeviation(mapping, sourceCents, 1)).toBeCloseTo(26, 0);
+  test("returns undefined for an unmapped B-degree", () => {
+    const m = mappingOf([0, 0], null, [2, 2]);
+    expect(computeDeviation(m, A, B, 1)).toBeUndefined();
   });
 
-  test("negative deviation (source flatter)", () => {
-    // key 2 (200¢) -> degree 3 at 189¢ → -11
-    const mapping = makeMapping([0, 1, 3, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
-    const sourceCents = [0, 63, 126, 189, 252, 315, 378, 442, 505, 568, 631, 694];
-    expect(computeDeviation(mapping, sourceCents, 2)).toBeCloseTo(-11, 0);
-  });
-
-  test("null assignment returns undefined", () => {
-    const mapping = makeMapping([null, null, null, null, null, null, null, null, null, null, null, null]);
-    expect(computeDeviation(mapping, [0, 100], 0)).toBeUndefined();
+  test("signed: positive when A is sharper than B's grid", () => {
+    const m = mappingOf([0, 0], [1, 2], null); // B1(100¢)→A2(200¢): dev +100
+    expect(computeDeviation(m, A, B, 1)).toBeCloseTo(100, 5);
   });
 });
 
-describe("findCollisions", () => {
-  test("no collisions when all distinct", () => {
-    expect(findCollisions(makeMapping([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]))).toEqual([]);
+describe("findCollisions(mapping)", () => {
+  test("groups B-degrees by A-degree and returns groups with >1", () => {
+    const m = mappingOf([0, 0], [1, 1], [2, 1]); // B1,B2 → A1
+    const cols = findCollisions(m);
+    expect(cols).toHaveLength(1);
+    expect(cols[0].aDegree).toBe(1);
+    expect(cols[0].bDegrees.sort()).toEqual([1, 2]);
   });
 
-  test("detects two keys on same degree", () => {
-    const collisions = findCollisions(makeMapping([0, 5, 5, 3, 4, 5, 6, 7, 8, 9, 10, 11]));
-    expect(collisions).toHaveLength(1);
-    expect(collisions[0].sourceDegree).toBe(5);
-    expect(collisions[0].destKeys).toEqual(expect.arrayContaining([1, 2, 5]));
+  test("returns empty when no collapses", () => {
+    const m = mappingOf([0, 0], [1, 1], [2, 2]);
+    expect(findCollisions(m)).toHaveLength(0);
   });
 
-  test("detects multiple collision groups", () => {
-    expect(findCollisions(makeMapping([0, 1, 1, 3, 4, 5, 6, 7, 7, 9, 10, 11]))).toHaveLength(2);
-  });
-});
-
-describe("findTies", () => {
-  test("no ties when no exact ties exist", () => {
-    const mapping = makeMapping([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
-    const sourceCents = [0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100];
-    expect(findTies(mapping, sourceCents)).toEqual([]);
-  });
-
-  test("flags an exact tie (equidistant candidates)", () => {
-    // key 6 (600¢) between degree 1 (575¢) and degree 2 (625¢): both 25 away
-    const mapping = makeMapping([0, null, null, null, null, null, 1, null, null, null, null, null]);
-    const sourceCents = [0, 575, 625];
-    const ties = findTies(mapping, sourceCents);
-    expect(ties.length).toBeGreaterThanOrEqual(1);
-    expect(ties[0].destKey).toBe(6);
+  test("sorted by aDegree ascending", () => {
+    const m = mappingOf([0, 2], [1, 1], [2, 1]); // collapses on A1; A2 used once
+    const cols = findCollisions(m);
+    expect(cols.map((c) => c.aDegree)).toEqual([...cols.map((c) => c.aDegree)].sort((x, y) => x - y));
   });
 });
 
-describe("computeStats", () => {
-  test("full mapping, zero deviation", () => {
-    const mapping = makeMapping([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
-    const sourceCents = [0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100];
-    const stats = computeStats(mapping, sourceCents);
-    expect(stats.avgError).toBeCloseTo(0, 5);
-    expect(stats.maxError).toBeCloseTo(0, 5);
-    expect(stats.collisions).toBe(0);
-    expect(stats.mappedCount).toBe(12);
+describe("findTies(mapping, aCents, bCents)", () => {
+  test("finds a B-degree equidistant between two A-degrees", () => {
+    // A has degrees at 0, 100, 200, ...; B-degree 1 at 150¢ is equidistant from A1(100) and A2(200).
+    const aCents = [0, 100, 200, 1200];
+    const bCents = [0, 150, 1200];
+    const m = mappingOf([0, 0], [1, 1], null); // B1 → A1 (lower wins in autoMap; here we assert tie detection)
+    const ties = findTies(m, aCents, bCents);
+    const t = ties.find((x) => x.bDegree === 1);
+    expect(t).toBeDefined();
+    expect(t?.chosenADegree).toBe(1);
+    expect(t?.tieAltADegree).toBe(2);
+  });
+});
+
+describe("computeStats(mapping, aCents, bCents)", () => {
+  test("mappedCount counts non-null assignments; unmappedCount = bLen-1 - mapped", () => {
+    // B has 4 degrees; mappable = 3 (0,1,2). Two mapped.
+    const m = mappingOf([0, 0], [1, 1], null);
+    const s = computeStats(m, A, B);
+    expect(s.mappedCount).toBe(2);
+    expect(s.unmappedCount).toBe(1);
   });
 
-  test("counts unmapped keys", () => {
-    const mapping = makeMapping([0, null, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
-    const stats = computeStats(mapping, [0, 100, 200]);
-    expect(stats.unmappedCount).toBe(1);
-    expect(stats.mappedCount).toBe(11);
+  test("collapses counts B-degrees involved in any collision", () => {
+    const m = mappingOf([0, 0], [1, 1], [2, 1]); // 2 B-degrees collapse onto A1
+    const s = computeStats(m, A, B);
+    expect(s.collapses).toBe(2);
+    expect(s.collisions).toBe(1);
+  });
+
+  test("avgError and maxError from absolute deviations", () => {
+    const m = mappingOf([0, 0], [1, 2], null); // B1(100)→A2(200): dev 100
+    const s = computeStats(m, A, B);
+    expect(s.avgError).toBeCloseTo(50, 5);  // (0 + 100) / 2 mapped
+    expect(s.maxError).toBeCloseTo(100, 5);
   });
 });
