@@ -2,85 +2,121 @@ import { createSignal, createMemo } from "solid-js";
 import { parseScl } from "../scl/parser";
 import { autoMap } from "../mapping/autoMap";
 import { computeStats } from "../mapping/deviation";
-import type { Mapping } from "../mapping/types";
-import type { SourceScale } from "../scl/types";
+import { edoScale } from "../scl/edo";
+import type { Mapping, Assignment } from "../mapping/types";
+import type { LoadedScale } from "../scl/types";
 import type { Waveform } from "../audio/synth";
 
-const EMPTY_MAPPING: Mapping = {
-  assignments: Array.from({ length: 12 }, () => null),
-};
+type Selection = { ring: "A" | "B"; degree: number } | null;
+
+function emptyMapping(length: number): Mapping {
+  return { assignments: Array.from({ length }, () => null) };
+}
 
 export function createStore() {
-  const [sourceScale, setSourceScale] = createSignal<SourceScale | null>(null);
-  const [mapping, setMapping] = createSignal<Mapping>({ assignments: [...EMPTY_MAPPING.assignments] });
-  const [selectedKey, setSelectedKey] = createSignal<number | null>(null);
+  const [scaleA, setScaleA] = createSignal<LoadedScale | null>(null);
+  // Default 12-EDO is tagged 'default' (not 'preset') so the UI shows note names.
+  // edoScale() returns origin 'preset'; override on initialization.
+  const initialB = edoScale(12);
+  initialB.origin = "default";
+  const [scaleB, setScaleB] = createSignal<LoadedScale>(initialB);
+
+  const bMappable = () => Math.max(0, scaleB().scale.degrees.length - 1);
+  const [mapping, setMapping] = createSignal<Mapping>(emptyMapping(bMappable()));
+  const [selected, setSelected] = createSignal<Selection>(null);
   const [waveform, setWaveform] = createSignal<Waveform>("sine");
 
-  // Derived: source cents array (or empty if no scale loaded)
-  const sourceCents = createMemo<number[]>(() =>
-    sourceScale() ? sourceScale()!.degrees.map((d) => d.cents) : [],
+  const aCents = createMemo<number[]>(() =>
+    scaleA() ? scaleA()!.scale.degrees.map((d) => d.cents) : [],
   );
+  const bCents = createMemo<number[]>(() => scaleB().scale.degrees.map((d) => d.cents));
+  const stats = createMemo(() => computeStats(mapping(), aCents(), bCents()));
 
-  // Derived: mapping stats
-  const stats = createMemo(() => computeStats(mapping(), sourceCents()));
+  function resetMapping(): void {
+    setMapping(emptyMapping(bMappable()));
+    setSelected(null);
+  }
 
-  function loadScale(sclString: string): void {
+  function loadScaleA(sclString: string, name: string): void {
     const scale = parseScl(sclString);
-    setSourceScale(scale);
-    setMapping({ assignments: [...EMPTY_MAPPING.assignments] });
-    setSelectedKey(null);
+    setScaleA({ scale, name, origin: "file" });
+    resetMapping();
+  }
+
+  function loadScaleB(sclString: string, name: string): void {
+    const scale = parseScl(sclString);
+    setScaleB({ scale, name, origin: "file" });
+    resetMapping();
+  }
+
+  function setBFromPreset(edo: number): void {
+    setScaleB(edoScale(edo));
+    resetMapping();
+  }
+
+  function resetBToDefault(): void {
+    const d = edoScale(12);
+    d.origin = "default";
+    setScaleB(d);
+    resetMapping();
   }
 
   function runAutoMap(): void {
-    const cents = sourceCents();
-    if (cents.length === 0) return;
-    const { mapping: m } = autoMap(cents);
+    const a = aCents();
+    const b = bCents();
+    if (a.length === 0 || b.length === 0) return;
+    const { mapping: m } = autoMap(a, b);
     setMapping(m);
   }
 
-  function connect(destKey: number, sourceDegree: number): void {
+  function connect(bDegree: number, aDegree: number): void {
     setMapping((prev) => {
       const assignments = [...prev.assignments];
-      assignments[destKey] = { destKey, sourceDegree };
+      const a: Assignment = { bDegree, aDegree };
+      assignments[bDegree] = a;
       return { assignments };
     });
   }
 
-  function disconnect(destKey: number): void {
+  function disconnect(bDegree: number): void {
     setMapping((prev) => {
-      if (prev.assignments[destKey] === null) return prev;
+      if (prev.assignments[bDegree] === null) return prev;
       const assignments = [...prev.assignments];
-      assignments[destKey] = null;
+      assignments[bDegree] = null;
       return { assignments };
     });
   }
 
   function clearMapping(): void {
-    setMapping({ assignments: [...EMPTY_MAPPING.assignments] });
-    setSelectedKey(null);
+    resetMapping();
   }
 
-  function selectKey(key: number): void {
-    setSelectedKey(key);
+  function select(ring: "A" | "B", degree: number): void {
+    setSelected({ ring, degree });
   }
 
   function clearSelection(): void {
-    setSelectedKey(null);
+    setSelected(null);
   }
 
   return {
-    sourceScale,
-    sourceCents,
+    scaleA,
+    scaleB,
     mapping,
-    selectedKey,
+    selected,
     waveform,
+    aCents,
+    bCents,
     stats,
-    loadScale,
+    loadScaleA,
+    loadScaleB,
+    setBFromPreset,
+    resetBToDefault,
     runAutoMap,
     connect,
     disconnect,
     clearMapping,
-    selectKey,
+    select,
     clearSelection,
     setWaveform,
   };
