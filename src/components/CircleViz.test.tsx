@@ -1,118 +1,74 @@
 import { describe, test, expect } from "vitest";
-import { render, fireEvent } from "@solidjs/testing-library";
-import { createRoot } from "solid-js";
+import { render } from "@solidjs/testing-library";
 import { CircleViz } from "./CircleViz";
 import { createStore } from "../state/store";
 
-const EDO19_SCL = `! 19edoblend.scl
-!
-19
-!
-63.1578947368421
-126.315789473684
-189.473684210526
-252.631578947368
-315.789473684211
-378.947368421053
-442.105263157895
-505.263157894737
-568.421052631579
-631.578947368421
-694.736842105263
-757.894736842105
-821.052631578947
-884.210526315789
-947.368421052632
-1010.52631578947
-1073.68421052632
-1136.84210526316
-2/1`;
-
-function setupStore() {
-  let store!: ReturnType<typeof createStore>;
-  createRoot(() => { store = createStore(); });
-  return store;
-}
+const EDO12_A = `! a.scl\nA\n12\n${Array.from({ length: 11 }, (_, i) => `${(i + 1) * 100}.0.`).join("\n")}\n2/1`;
 
 describe("CircleViz", () => {
-  test("renders placeholder when no scale loaded", () => {
-    const store = setupStore();
+  test("shows placeholder when no source loaded", () => {
+    const store = createStore();
     const { getByText } = render(() => <CircleViz store={store} />);
-    expect(getByText(/load a scale/i)).toBeTruthy();
+    expect(getByText(/load a scale to begin/i)).toBeInTheDocument();
   });
 
-  test("renders outer dots for 19-EDO (octave repeat skipped)", () => {
-    const store = setupStore();
-    store.loadScale(EDO19_SCL);
+  test("renders one outer dot per A-degree (minus A's period)", () => {
+    const store = createStore();
+    store.loadScaleA(EDO12_A, "A");
     const { container } = render(() => <CircleViz store={store} />);
     const outerDots = container.querySelectorAll('[data-ring="outer"]');
-    // 19 entries + synthetic root = 20, minus the 2/1 octave repeat (same
-    // pitch class as the root, overlaps it at the top) = 19 shown.
-    expect(outerDots.length).toBe(19);
+    // A has 13 degrees; the period (last) is skipped → 12 outer dots.
+    expect(outerDots.length).toBe(12);
   });
 
-  test("renders 12 inner dots", () => {
-    const store = setupStore();
-    store.loadScale(EDO19_SCL);
+  test("renders one inner dot per B-degree (minus B's period)", () => {
+    const store = createStore();
+    store.loadScaleA(EDO12_A, "A");
     const { container } = render(() => <CircleViz store={store} />);
     const innerDots = container.querySelectorAll('[data-ring="inner"]');
+    // default B = 12-EDO, 13 degrees, period skipped → 12 inner dots.
     expect(innerDots.length).toBe(12);
   });
 
-  test("renders 12 connectors after auto-map", () => {
-    const store = setupStore();
-    store.loadScale(EDO19_SCL);
-    store.runAutoMap();
+  test("inner dots show note-name labels when B is the 12-EDO default", () => {
+    const store = createStore();
+    store.loadScaleA(EDO12_A, "A");
     const { container } = render(() => <CircleViz store={store} />);
-    const connectors = container.querySelectorAll('[data-role="connector"]');
-    expect(connectors.length).toBe(12);
+    const labels = Array.from(container.querySelectorAll("g > text")).map((n) => n.textContent);
+    expect(labels).toContain("C");
+    expect(labels).toContain("B");
   });
 
-  test("clicking (pointer down+up without moving) an inner dot selects it", () => {
-    const store = setupStore();
-    store.loadScale(EDO19_SCL);
+  test("inner dots show degree·cents labels when B is a non-default preset", () => {
+    const store = createStore();
+    store.loadScaleA(EDO12_A, "A");
+    store.setBFromPreset(19); // origin 'preset', not 'default'
     const { container } = render(() => <CircleViz store={store} />);
-    const innerDots = container.querySelectorAll('[data-ring="inner"]');
-    fireEvent.pointerDown(innerDots[0], { clientX: 0, clientY: 0 });
-    fireEvent.pointerUp(window, { clientX: 0, clientY: 0 });
-    expect(store.selectedKey()).toBe(0);
+    const labels = Array.from(container.querySelectorAll("g > text")).map((n) => n.textContent);
+    // No "C" note names; instead degree·cents labels.
+    expect(labels.some((t) => t?.includes("·"))).toBe(true);
+    expect(labels).not.toContain("C");
   });
 
-  test("connectors carry data-key and a double-click hit area", () => {
-    const store = setupStore();
-    store.loadScale(EDO19_SCL);
-    store.runAutoMap();
+  test("renders B-degree gridlines (count = B mappable degree count)", () => {
+    const store = createStore();
+    store.loadScaleA(EDO12_A, "A");
     const { container } = render(() => <CircleViz store={store} />);
-    const hits = container.querySelectorAll('[data-role="connector-hit"]');
-    expect(hits.length).toBe(12);
-    // Every hit line carries the dest key it would disconnect.
-    expect(hits[0].getAttribute("data-key")).not.toBeNull();
+    const gridlines = container.querySelectorAll('line[data-role="gridline"]');
+    // default B = 12-EDO → 12 gridlines.
+    expect(gridlines.length).toBe(12);
   });
 
-  test("double-clicking a connector hit line disconnects that key", () => {
-    const store = setupStore();
-    store.loadScale(EDO19_SCL);
-    store.runAutoMap();
+  test("renders a ×N collapse badge on an A-degree with multiple B-degrees collapsed onto it", () => {
+    const store = createStore();
+    // A with 3 mappable notes: 0, 200, 400 (+ period 1200)
+    const sparseA = `! a.scl\nA\n3\n200.0.\n400.0.\n2/1`;
+    store.loadScaleA(sparseA, "A");
+    store.runAutoMap(); // multiple B-degrees will collapse onto sparse A-degrees
     const { container } = render(() => <CircleViz store={store} />);
-    const hits = container.querySelectorAll('[data-role="connector-hit"]');
-    const key = Number(hits[0].getAttribute("data-key"));
-    expect(store.mapping().assignments[key]).not.toBeNull();
-    fireEvent.dblClick(hits[0]);
-    expect(store.mapping().assignments[key]).toBeNull();
-  });
-
-  test("renders zoom toolbar with three controls once a scale is loaded", () => {
-    const store = setupStore();
-    store.loadScale(EDO19_SCL);
-    const { getByLabelText } = render(() => <CircleViz store={store} />);
-    expect(getByLabelText(/zoom out/i)).toBeTruthy();
-    expect(getByLabelText(/reset to fit/i)).toBeTruthy();
-    expect(getByLabelText(/zoom in/i)).toBeTruthy();
-  });
-
-  test("placeholder view has no zoom toolbar", () => {
-    const store = setupStore();
-    const { queryByLabelText } = render(() => <CircleViz store={store} />);
-    expect(queryByLabelText(/zoom/i)).toBeNull();
+    const badges = container.querySelectorAll('[data-role="collapse-badge"]');
+    expect(badges.length).toBeGreaterThan(0);
+    const firstBadge = badges[0].textContent ?? "";
+    expect(firstBadge).toMatch(/×\d+/);
   });
 });
