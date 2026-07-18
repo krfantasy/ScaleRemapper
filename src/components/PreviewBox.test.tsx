@@ -11,57 +11,66 @@ function setupStore() {
   return store;
 }
 
-const EDO19_SCL = `19edo
-19
-63.1578947368421
-126.315789473684
-189.473684210526
-252.631578947368
-315.789473684211
-378.947368421053
-442.105263157895
-505.263157894737
-568.421052631579
-631.578947368421
-694.736842105263
-757.894736842105
-821.052631578947
-884.210526315789
-947.368421052632
-1010.52631578947
-1073.68421052632
-1136.84210526316
-2/1`;
+const EDO12_A = `! a.scl\nA Scale\n12\n${Array.from({ length: 11 }, (_, i) => `${(i + 1) * 100}.0.`).join("\n")}\n2/1`;
 
 describe("PreviewBox", () => {
-  test("renders a read-only pre element", () => {
-    const store = setupStore();
-    store.loadScale(EDO19_SCL);
-    store.runAutoMap();
-    const { container } = render(() => <PreviewBox store={store} />);
-    const pre = container.querySelector("pre");
-    expect(pre).toBeTruthy();
-  });
-
-  test("readable view shows 12 note lines when fully mapped", () => {
-    const store = setupStore();
-    store.loadScale(EDO19_SCL);
-    store.runAutoMap();
-    const { container } = render(() => <PreviewBox store={store} />);
-    const pre = container.querySelector("pre")!;
-    const lines = pre.textContent!.split("\n").filter((l) => l.trim() !== "");
-    expect(lines.length).toBe(12);
-  });
-
-  test("raw view shows .scl format", async () => {
+  test("raw view shows the new header naming A and B", async () => {
     const user = userEvent.setup();
     const store = setupStore();
-    store.loadScale(EDO19_SCL);
+    store.loadScaleA(EDO12_A, "A Scale");
     store.runAutoMap();
     const { container, getByText } = render(() => <PreviewBox store={store} />);
     await user.click(getByText("Raw .scl"));
-    const pre = container.querySelector("pre")!;
-    expect(pre.textContent).toContain("12");
-    expect(pre.textContent).toContain("2/1");
+    const pre = container.querySelector("pre");
+    expect(pre?.textContent ?? "").toContain("Remapped A Scale onto 12-EDO");
+  });
+
+  test("raw view ends with B's period (2/1 for default B)", async () => {
+    const user = userEvent.setup();
+    const store = setupStore();
+    store.loadScaleA(EDO12_A, "A Scale");
+    store.runAutoMap();
+    const { container, getByText } = render(() => <PreviewBox store={store} />);
+    await user.click(getByText("Raw .scl"));
+    const pre = container.querySelector("pre");
+    expect(pre?.textContent ?? "").toMatch(/2\/1\s*$/);
+  });
+
+  test("raw view line count matches B (count + entries for 12-EDO = 13 non-comment lines)", async () => {
+    const user = userEvent.setup();
+    const store = setupStore();
+    store.loadScaleA(EDO12_A, "A Scale");
+    store.runAutoMap();
+    const { container, getByText } = render(() => <PreviewBox store={store} />);
+    await user.click(getByText("Raw .scl"));
+    const pre = container.querySelector("pre");
+    // Output = [header, count, ...entries]. Header starts with "! Remapped..." → filtered as comment.
+    // Remaining = count line "12" + 12 entries = 13 lines.
+    const lines = (pre?.textContent ?? "").split("\n").filter((l) => l.trim() !== "" && !l.startsWith("!"));
+    expect(lines.length).toBe(13);
+  });
+
+  test("B=19-EDO produces 19-entry output (count + 19 entries = 20 lines)", async () => {
+    const user = userEvent.setup();
+    const store = setupStore();
+    store.loadScaleA(EDO12_A, "A");
+    store.setBFromPreset(19);
+    store.runAutoMap();
+    const { container, getByText } = render(() => <PreviewBox store={store} />);
+    await user.click(getByText("Raw .scl"));
+    const pre = container.querySelector("pre");
+    const lines = (pre?.textContent ?? "").split("\n").filter((l) => l.trim() !== "" && !l.startsWith("!"));
+    expect(lines.length).toBe(20);
+  });
+
+  test("readable view shows one line per B-degree", async () => {
+    const store = setupStore();
+    store.loadScaleA(EDO12_A, "A Scale");
+    store.runAutoMap();
+    const { container } = render(() => <PreviewBox store={store} />);
+    // default view is readable; one <span> per B-degree = 12 lines
+    const pre = container.querySelector("pre");
+    const lines = (pre?.textContent ?? "").split("\n").filter((l) => l.trim() !== "");
+    expect(lines.length).toBe(12);
   });
 });

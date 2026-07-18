@@ -1,6 +1,6 @@
 import { createSignal, For, Show, createMemo, type Component } from "solid-js";
 import type { Store } from "../state/store";
-import { destCents, noteName } from "../utils/cents";
+import { noteName } from "../scl/edo";
 import { serializeMappingToScl } from "../scl/serializer";
 
 interface Props { store: Store; }
@@ -20,26 +20,31 @@ function fmtSigned(cents: number): string {
 export const PreviewBox: Component<Props> = (props) => {
   const [view, setView] = createSignal<"readable" | "raw">("readable");
 
+  // Readable view: one line per B-degree (not hardcoded 12).
   const readableLines = createMemo(() => {
-    const cents = props.store.sourceCents();
-    return Array.from({ length: 12 }, (_, k) => {
-      const a = props.store.mapping().assignments[k];
-      if (!a) return { key: k, dev: null as number | null };
-      const dev = cents[a.sourceDegree] - destCents(k);
-      return { key: k, dev };
+    const aCents = props.store.aCents();
+    const bCents = props.store.bCents();
+    const bLoaded = props.store.scaleB();
+    return props.store.mapping().assignments.map((a, b) => {
+      if (!a) return { bDegree: b, label: labelFor(b, bCents[b], bLoaded.origin), dev: null as number | null };
+      const dev = aCents[a.aDegree] - bCents[b];
+      return { bDegree: b, label: labelFor(b, bCents[b], bLoaded.origin), dev };
     });
   });
 
   const rawText = createMemo(() => {
-    const scale = props.store.sourceScale();
-    if (!scale) return "";
-    if (props.store.stats().mappedCount !== 12) return "Not all 12 keys mapped.";
-    return serializeMappingToScl(
-      props.store.mapping(),
-      scale.degrees.map((d) => d.cents),
-      scale.description,
-    );
+    const a = props.store.scaleA();
+    if (!a) return "";
+    if (props.store.stats().mappedCount !== props.store.bCents().length - 1) {
+      return "Not all B-degrees mapped.";
+    }
+    return serializeMappingToScl(props.store.mapping(), props.store.aCents(), props.store.scaleB(), a.name);
   });
+
+  // Label for a B-degree: note name when B is the default, else "degree·cents".
+  function labelFor(bDegree: number, cents: number, origin: string): string {
+    return origin === "default" ? noteName(bDegree) : `${bDegree}·${cents.toFixed(0)}¢`;
+  }
 
   return (
     <div class="preview-box">
@@ -61,8 +66,8 @@ export const PreviewBox: Component<Props> = (props) => {
                 }}
               >
                 {line.dev === null
-                  ? `${noteName(line.key).padEnd(3)} →  (unmapped)`
-                  : `${noteName(line.key).padEnd(3)} →  ${noteName(line.key).padEnd(4)} ${fmtSigned(line.dev)}`}
+                  ? `${line.label.padEnd(8)} →  (unmapped)`
+                  : `${line.label.padEnd(8)} →  ${fmtSigned(line.dev)}`}
                 {"\n"}
               </span>
             )}
