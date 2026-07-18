@@ -23,6 +23,8 @@ body {
 
 .topbar-actions {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 
@@ -38,6 +40,35 @@ body {
 .topbar-actions button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Scale-control groups (A and B) — align their label/button/select/name on a
+   shared centerline so the dropdown, buttons, and text all line up. */
+.scale-group {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.scale-group .scale-label {
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #666;
+}
+
+.scale-group .scale-name {
+  font-size: 0.75rem;
+  color: #333;
+}
+
+/* Match the select to the buttons' height/padding so it aligns on the centerline. */
+.scale-group select {
+  padding: 0.375rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  background: #fff;
+  cursor: pointer;
 }
 
 /* SidePanel */

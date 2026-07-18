@@ -89,14 +89,44 @@ export const CircleViz: Component<Props> = (props) => {
   const size = createMemo(() => Math.max(0, Math.min(availWidth(), availHeight()) * zoom()));
 
   // B inner dots, data-driven.
+  // Each dot carries:
+  //   - `label`: the full label for hover tooltips (note name OR "i · cents¢")
+  //   - `inDot`: the short text rendered INSIDE the dot (note name for default B,
+  //      degree index otherwise — kept to 1-2 chars so it fits the small dot)
+  //   - `side`: when the in-dot text is just an index (non-default B), the full
+  //      "i · cents¢" string rendered BESIDE the dot toward the circle center,
+  //      since it's too long to fit inside. `null` for default B (note names fit).
   const innerDots = createMemo(() => {
     const ds = bScale().degrees;
-    // Skip B's last degree (its period) — same pitch class as root.
-    const out: { bDegree: number; cents: number; label: string; x: number; y: number }[] = [];
+    const isDefault = bLoaded().origin === "default";
+    type InnerDot = {
+      bDegree: number; cents: number; label: string; inDot: string;
+      side: { text: string; x: number; y: number; anchor: "start" | "end" } | null;
+      x: number; y: number;
+    };
+    const out: InnerDot[] = [];
     for (let i = 0; i < ds.length - 1; i++) {
       const cents = ds[i].cents;
-      const label = bLoaded().origin === "default" ? noteName(i) : `${i} · ${cents.toFixed(2)}¢`;
-      out.push({ bDegree: i, cents, label, x: dotX(cents, periodB(), R_INNER), y: dotY(cents, periodB(), R_INNER) });
+      const note = noteName(i);
+      const full = `${i} · ${cents.toFixed(2)}¢`;
+      const x = dotX(cents, periodB(), R_INNER);
+      const y = dotY(cents, periodB(), R_INNER);
+      let side: InnerDot["side"] = null;
+      if (!isDefault) {
+        // Place the side label just past the dot, toward the circle center.
+        const dx = CX - x, dy = CY - y;
+        const len = Math.hypot(dx, dy) || 1;
+        const off = 11;
+        const lx = x + (dx / len) * off;
+        const ly = y + (dy / len) * off;
+        side = { text: full, x: lx, y: ly + 2.5, anchor: lx >= CX ? "start" : "end" };
+      }
+      out.push({
+        bDegree: i, cents,
+        label: isDefault ? note : full,
+        inDot: isDefault ? note : String(i),
+        side, x, y,
+      });
     }
     return out;
   });
@@ -335,10 +365,21 @@ export const CircleViz: Component<Props> = (props) => {
                         }}
                         onMouseOut={() => setHovered(null)}
                       />
+                      {/* In-dot label: short (note name or degree index) so it fits. */}
                       <text x={dot.x} y={dot.y + 3} text-anchor="middle"
                         fill="#fff" font-size="7" font-weight="bold" pointer-events="none">
-                        {dot.label}
+                        {dot.inDot}
                       </text>
+                      {/* Side label for non-default B: the full "i · cents¢" placed beside
+                          the dot toward the circle center, since it's too long to fit inside. */}
+                      <Show when={dot.side}>
+                        {(side) => (
+                          <text x={side().x} y={side().y} text-anchor={side().anchor}
+                            fill="#1d4ed8" font-size="7" font-weight="600" pointer-events="none">
+                            {side().text}
+                          </text>
+                        )}
+                      </Show>
                     </g>
                   );
                 }}
