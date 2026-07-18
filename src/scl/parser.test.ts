@@ -30,7 +30,7 @@ describe("parseScl - structure", () => {
     const scale = parseScl(EDO19);
     // degrees = synthetic root (0¢) + all 19 file entries = 20 total.
     expect(scale.degrees).toHaveLength(20);
-    expect(scale.degrees[0]).toEqual({ degree: 0, cents: 0 });
+    expect(scale.degrees[0]).toEqual({ degree: 0, cents: 0, raw: "1/1" });
     expect(scale.degrees[1].cents).toBeCloseTo(63.158, 2);
     expect(scale.degrees[18].cents).toBeCloseTo(1136.842, 3);
     expect(scale.degrees[19].cents).toBeCloseTo(1200, 5);
@@ -93,5 +93,37 @@ describe("parseScl - edge cases", () => {
 
   test("throws on too few entries", () => {
     expect(() => parseScl(`t\n5\n100.0.`)).toThrow();
+  });
+
+  test("preserves raw entry text on each degree", () => {
+    const scale = parseScl(`! file.scl\nMy Scale\n2\n3/2\n2/1`);
+    expect(scale.degrees[0].raw).toBe("1/1");          // synthetic root
+    expect(scale.degrees[1].raw).toBe("3/2");
+    expect(scale.degrees[2].raw).toBe("2/1");
+  });
+
+  test("preserves raw text for cents entries including trailing dot", () => {
+    const scale = parseScl(`t\n2\n100.0.\n200.0.`);
+    expect(scale.degrees[1].raw).toBe("100.0.");
+    expect(scale.degrees[2].raw).toBe("200.0.");
+  });
+
+  test("periodRaw is the verbatim last entry", () => {
+    const scale = parseScl(`t\n2\n3/2\n2/1`);
+    expect(scale.periodRaw).toBe("2/1");
+  });
+
+  test("periodRaw is non-octave value for Bohlen-Pierce-style period", () => {
+    const scale = parseScl(`t\n1\n3/1`);
+    expect(scale.periodRaw).toBe("3/1");
+    expect(scale.degrees[1].cents).toBeCloseTo(1901.955, 2);
+    expect(scale.isOctaveClosing).toBe(false);
+  });
+
+  test("periodRaw is empty string for a root-only scale (count 0)", () => {
+    // count = 0 is permitted by the spec's lower limit; produces a root-only scale.
+    const scale = parseScl(`t\n0\n`);
+    expect(scale.degrees).toHaveLength(1);
+    expect(scale.periodRaw).toBe("");
   });
 });

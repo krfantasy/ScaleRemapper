@@ -44,7 +44,7 @@ export function parseScl(scl: string): SourceScale {
     entryStart = 2;
   }
 
-  if (Number.isNaN(count) || count < 1) {
+  if (Number.isNaN(count) || count < 0) {
     throw new Error(`Invalid .scl note count.`);
   }
 
@@ -55,15 +55,18 @@ export function parseScl(scl: string): SourceScale {
     );
   }
 
-  const degrees: ScaleDegree[] = [{ degree: 0, cents: 0 }];
+  const degrees: ScaleDegree[] = [{ degree: 0, cents: 0, raw: "1/1" }];
   for (let i = 0; i < entryLines.length; i++) {
-    degrees.push({ degree: i + 1, cents: parseEntry(entryLines[i]) });
+    degrees.push({ degree: i + 1, cents: parseEntry(entryLines[i]), raw: entryLines[i] });
   }
 
   const lastCents = degrees[degrees.length - 1].cents;
+  // periodRaw = verbatim text of the last entry; "" for a root-only scale.
+  const periodRaw = degrees.length > 1 ? degrees[degrees.length - 1].raw : "";
   return {
     description,
     degrees,
+    periodRaw,
     isOctaveClosing: Math.abs(lastCents - 1200) < 0.01,
   };
 }
