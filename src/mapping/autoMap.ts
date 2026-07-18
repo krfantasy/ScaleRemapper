@@ -1,4 +1,3 @@
-import { destCents } from "../utils/cents";
 import { findTies } from "./deviation";
 import type { Assignment, Mapping, TieResult } from "./types";
 
@@ -8,36 +7,41 @@ export interface AutoMapResult {
 }
 
 /**
- * Nearest-neighbor auto-map: assign each of the 12 dest keys to the source degree
- * with cents closest to that key's 12-EDO value.
+ * Nearest-neighbor auto-map: assign each B-degree (except B's period) to the
+ * A-degree with cents closest to that B-degree's cents.
  *
- * - The final source degree (the octave at 1200¢) is excluded from candidates,
- *   since it is equivalent to the root (0¢) of the next octave.
- * - Tie-break: if two candidates are exactly equidistant, pick the LOWER degree.
- *   The losing candidate is recorded in the returned ties list.
+ * - A's final degree (the period/octave repeat) is excluded from candidates,
+ *   since it is equivalent to the root of the next period.
+ * - B's final degree (B's period) is not assigned (it is the structural period
+ *   of the output, handled by the serializer, not a degree to map).
+ * - Tie-break: on exact equidistance, pick the LOWER A-degree. The losing
+ *   candidate is recorded in the returned ties list.
  */
-export function autoMap(sourceCents: number[]): AutoMapResult {
-  // Candidate degrees: all except the last (the octave repeat).
-  const last = sourceCents.length - 1;
-  const candidates = sourceCents.slice(0, last);
+export function autoMap(aCents: number[], bCents: number[]): AutoMapResult {
+  // A candidates: all except A's last degree (A's period).
+  const aLast = aCents.length - 1;
+  const candidates = aCents.slice(0, aLast);
+
+  // B-degrees to map: all except B's last degree (B's period).
+  const bLast = bCents.length - 1;
 
   const assignments: (Assignment | null)[] = [];
-  for (let key = 0; key < 12; key++) {
-    const target = destCents(key);
+  for (let b = 0; b < bLast; b++) {
+    const target = bCents[b];
     let bestDeg = 0;
     let bestDist = Infinity;
     for (let d = 0; d < candidates.length; d++) {
       const dist = Math.abs(candidates[d] - target);
-      // Strict < so that on exact ties the FIRST (lower) degree wins.
+      // Strict < so that on exact ties the FIRST (lower) A-degree wins.
       if (dist < bestDist) {
         bestDist = dist;
         bestDeg = d;
       }
     }
-    assignments.push({ destKey: key, sourceDegree: bestDeg });
+    assignments.push({ bDegree: b, aDegree: bestDeg });
   }
 
   const mapping: Mapping = { assignments };
-  const ties = findTies(mapping, sourceCents);
+  const ties = findTies(mapping, aCents, bCents);
   return { mapping, ties };
 }

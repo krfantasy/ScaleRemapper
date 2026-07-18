@@ -1,50 +1,73 @@
 import { describe, test, expect } from "vitest";
 import { autoMap } from "./autoMap";
 
-// 19-EDO source cents (degrees 0-18, step ≈ 63.158). NOTE: the parser prepends
-// a synthetic root at degree 0 (0¢), so a 19-entry .scl file yields 20 degrees.
-// But for auto-map we pass just the cents array. Here we simulate the source
-// cents array as it would come from the store: 20 entries (0 through 1200¢).
+// 19-EDO as Scale A (cents array). The octave degree (last, 1200¢) is excluded as a candidate.
 const EDO19 = [0, 63.158, 126.316, 189.474, 252.632, 315.789, 378.947, 442.105,
   505.263, 568.421, 631.579, 694.737, 757.895, 821.053, 884.211, 947.368,
   1010.526, 1073.684, 1136.842, 1200];
 
-describe("autoMap", () => {
-  test("maps all 12 keys", () => {
-    const { mapping } = autoMap(EDO19);
+// 12-EDO as Scale B.
+const EDO12 = Array.from({ length: 13 }, (_, i) => i * 100); // [0,100,...,1200]
+
+describe("autoMap(aCents, bCents)", () => {
+  test("produces one assignment per B-degree (excluding B's period)", () => {
+    // B has 13 degrees (0..12); we map degrees 0..11, not 12 (B's period).
+    const { mapping } = autoMap(EDO19, EDO12);
     expect(mapping.assignments).toHaveLength(12);
     expect(mapping.assignments.every((a) => a !== null)).toBe(true);
   });
 
-  test("key 0 maps to degree 0 (root)", () => {
-    const { mapping } = autoMap(EDO19);
-    expect(mapping.assignments[0]?.sourceDegree).toBe(0);
+  test("B-degree 0 maps to A-degree 0 (root)", () => {
+    const { mapping } = autoMap(EDO19, EDO12);
+    expect(mapping.assignments[0]?.aDegree).toBe(0);
   });
 
-  test("key 1 (100¢) maps to nearest degree (degree 2, 126.316¢)", () => {
-    const { mapping } = autoMap(EDO19);
-    expect(mapping.assignments[1]?.sourceDegree).toBe(2);
+  test("B-degree 1 (100¢) maps to nearest A-degree (degree 2, 126.316¢)", () => {
+    const { mapping } = autoMap(EDO19, EDO12);
+    expect(mapping.assignments[1]?.aDegree).toBe(2);
   });
 
-  test("key 2 (200¢) maps to nearest degree (degree 3, 189.474¢)", () => {
-    const { mapping } = autoMap(EDO19);
-    expect(mapping.assignments[2]?.sourceDegree).toBe(3);
+  test("B-degree 2 (200¢) maps to nearest A-degree (degree 3, 189.474¢)", () => {
+    const { mapping } = autoMap(EDO19, EDO12);
+    expect(mapping.assignments[2]?.aDegree).toBe(3);
   });
 
-  test("exact tie (key 6 / 600¢ in 19-EDO) breaks to lower degree", () => {
-    // 600¢ is exactly between degree 9 (568.421¢) and degree 10 (631.579¢)
-    const { mapping, ties } = autoMap(EDO19);
-    expect(mapping.assignments[6]?.sourceDegree).toBe(9); // lower degree wins
-    const tie = ties.find((t) => t.destKey === 6);
+  test("exact tie breaks to lower A-degree", () => {
+    // B-degree 6 (600¢) is exactly between A-degree 9 (568.421¢) and 10 (631.579¢)
+    const { mapping, ties } = autoMap(EDO19, EDO12);
+    expect(mapping.assignments[6]?.aDegree).toBe(9); // lower wins
+    const tie = ties.find((t) => t.bDegree === 6);
     expect(tie).toBeDefined();
-    expect(tie?.tieAltDegree).toBe(10);
+    expect(tie?.tieAltADegree).toBe(10);
   });
 
-  test("ignores the final octave degree (1200¢) when mapping keys 0-11", () => {
-    // The octave (1200¢) is equivalent to root (0¢) of next octave; don't map any key to it
-    const { mapping } = autoMap(EDO19);
+  test("never assigns to A's period (last A-degree, 1200¢)", () => {
+    const { mapping } = autoMap(EDO19, EDO12);
     for (const a of mapping.assignments) {
-      expect(a?.sourceDegree).not.toBe(EDO19.length - 1);
+      expect(a?.aDegree).not.toBe(EDO19.length - 1);
     }
+  });
+
+  test("collapses: when A is sparser than B, multiple B-degrees map to the same A-degree", () => {
+    // A = a 5-note scale (root + 3 entries + period): 0, 150, 400, 800, 1200.
+    // Chosen so B-degrees 1 (100¢) and 2 (200¢) both nearest A-degree 1 (150¢) — no ties.
+    const sparseA = [0, 150, 400, 800, 1200];
+    // B = 12-EDO (degrees 0..11)
+    const { mapping } = autoMap(sparseA, EDO12);
+    // B-degree 1 (100¢): |100-0|=100, |100-150|=50 → A-degree 1.
+    // B-degree 2 (200¢): |200-150|=50, |200-400|=200 → A-degree 1. Collapse.
+    expect(mapping.assignments[1]?.aDegree).toBe(1);
+    expect(mapping.assignments[2]?.aDegree).toBe(1);
+    // Both B-degrees share A-degree 1 — this is the expected collapse, not an error.
+    const aDeg1 = mapping.assignments.filter((a) => a?.aDegree === 1);
+    expect(aDeg1.length).toBe(2);
+  });
+
+  test("works with non-octave B (Bohlen-Pierce-shaped period)", () => {
+    // B = 3 evenly-spaced notes over 1901.955¢ (a toy BP-ish scale). period = degree 3.
+    const bpB = [0, 1901.955 / 3, (1901.955 / 3) * 2, 1901.955];
+    const { mapping } = autoMap(EDO19, bpB);
+    expect(mapping.assignments).toHaveLength(3); // B-degrees 0,1,2 (period at 3 excluded)
+    expect(mapping.assignments.every((a) => a !== null)).toBe(true);
   });
 });
