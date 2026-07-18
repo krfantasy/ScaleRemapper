@@ -60,6 +60,24 @@ describe("findTies(mapping, aCents, bCents)", () => {
     expect(t?.chosenADegree).toBe(1);
     expect(t?.tieAltADegree).toBe(2);
   });
+
+  test("never reports A's period (last degree) as a tie alternative", () => {
+    // A's period (last degree) is excluded as an autoMap candidate, so findTies
+    // must not report it as a tieAltADegree — that would reference a degree
+    // autoMap could never have chosen.
+    // A = [0, 300, 600, 1200] (period = A3 = 1200¢). B-degree 1 at 900¢ is
+    // equidistant from A2 (600¢, dist 300) and A3 the period (1200¢, dist 300),
+    // but NOT from any other real candidate (A0=0 dist 900, A1=300 dist 600).
+    // The OLD code (scanning all degrees) would have reported a tie with alt=A3.
+    // The fixed code (excluding the period) correctly reports NO tie, because
+    // among real candidates A2 is the unique nearest.
+    const aCents = [0, 300, 600, 1200];
+    const bCents = [0, 900, 1200];
+    const m = mappingOf([0, 0], [1, 2], null); // B1 → A2 (600¢)
+    const ties = findTies(m, aCents, bCents);
+    const t = ties.find((x) => x.bDegree === 1);
+    expect(t).toBeUndefined(); // no tie among real candidates
+  });
 });
 
 describe("computeStats(mapping, aCents, bCents)", () => {

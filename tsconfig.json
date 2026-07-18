@@ -9,7 +9,7 @@
     "esModuleInterop": true,
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
-    "types": ["vite/client", "vitest/globals"],
+    "types": ["vite/client", "vitest/globals", "node"],
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "noEmit": true,
     "isolatedModules": true,

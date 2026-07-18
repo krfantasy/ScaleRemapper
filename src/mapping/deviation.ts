@@ -29,16 +29,21 @@ export function findCollisions(mapping: Mapping): Collision[] {
   return collisions.sort((a, b) => a.aDegree - b.aDegree);
 }
 
-/** Find B-degrees whose chosen A-degree has an equidistant alternative in A. */
+/** Find B-degrees whose chosen A-degree has an equidistant alternative in A.
+ *  Only considers the same candidate set as autoMap: A's degrees EXCEPT the last
+ *  (A's period), so a reported tieAltADegree is always a degree autoMap could
+ *  actually have chosen. */
 export function findTies(mapping: Mapping, aCents: number[], bCents: number[]): TieResult[] {
   const ties: TieResult[] = [];
+  // A candidates exclude A's last degree (A's period), matching autoMap.
+  const aLast = aCents.length - 1;
   for (let b = 0; b < mapping.assignments.length; b++) {
     const a = mapping.assignments[b];
     if (!a) continue;
     const target = bCents[b];
     const chosenDist = Math.abs(aCents[a.aDegree] - target);
     let alt: number | null = null;
-    for (let d = 0; d < aCents.length; d++) {
+    for (let d = 0; d < aLast; d++) {
       if (d === a.aDegree) continue;
       if (Math.abs(Math.abs(aCents[d] - target) - chosenDist) < 1e-9) {
         alt = d;

@@ -1,4 +1,4 @@
-import { For, Show, createSignal, createMemo, onMount, onCleanup, type Component } from "solid-js";
+import { For, Show, createSignal, createMemo, createEffect, onMount, onCleanup, type Component } from "solid-js";
 import type { Store } from "../state/store";
 import { noteName } from "../scl/edo";
 import { findCollisions } from "../mapping/deviation";
@@ -53,6 +53,14 @@ export const CircleViz: Component<Props> = (props) => {
   const [availWidth, setAvailWidth] = createSignal(0);
   const [availHeight, setAvailHeight] = createSignal(0);
   const [selectedADegree, setSelectedADegree] = createSignal<number | null>(null);
+
+  // Keep local A-selection in sync with the store: when the store's selection
+  // clears (which happens on every scale load via resetMapping), clear the local
+  // A-highlight too, so a stale index doesn't falsely highlight a dot on the new
+  // scale A ring.
+  createEffect(() => {
+    if (props.store.selected() === null) setSelectedADegree(null);
+  });
 
   type Pt = { x: number; y: number };
   type DragFrom =
