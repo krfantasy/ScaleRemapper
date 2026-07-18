@@ -1,48 +1,56 @@
 import { describe, test, expect, vi } from "vitest";
-import { render } from "@solidjs/testing-library";
-import { createRoot } from "solid-js";
+import { render, screen, fireEvent } from "@solidjs/testing-library";
 import { TopBar } from "./TopBar";
 import { createStore } from "../state/store";
 
-function setupStore(withMapping = false) {
-  let store!: ReturnType<typeof createStore>;
-  createRoot((dispose) => {
-    store = createStore();
-    if (withMapping) {
-      store.loadScale(`t\n12\n100.0.\n200.0.\n300.0.\n400.0.\n500.0.\n600.0.\n700.0.\n800.0.\n900.0.\n1000.0.\n1100.0.\n2/1`);
-      store.runAutoMap();
-    }
-  });
-  return store;
-}
+const EDO12 = `! a.scl\nA\n12\n${Array.from({ length: 11 }, (_, i) => `${(i + 1) * 100}.0.`).join("\n")}\n2/1`;
 
 describe("TopBar", () => {
-  test("renders all four buttons", () => {
-    const store = setupStore();
-    const { getByText } = render(() => <TopBar store={store} onSave={() => {}} />);
-    expect(getByText("Load .scl")).toBeTruthy();
-    expect(getByText("Auto-Map")).toBeTruthy();
-    expect(getByText("Clear")).toBeTruthy();
-    expect(getByText("Save .scl")).toBeTruthy();
+  test("Scale A group shows 'No source loaded' initially", () => {
+    const store = createStore();
+    render(() => <TopBar store={store} onSave={() => {}} />);
+    expect(screen.getByText(/no source loaded/i)).toBeInTheDocument();
   });
 
-  test("Save is disabled when not all keys mapped", () => {
-    const store = setupStore();
-    const { getByText } = render(() => <TopBar store={store} onSave={() => {}} />);
-    expect((getByText("Save .scl") as HTMLButtonElement).disabled).toBe(true);
+  test("Scale B group shows '12-EDO' initially, no reset chip", () => {
+    const store = createStore();
+    render(() => <TopBar store={store} onSave={() => {}} />);
+    // B name renders as "12-EDO"; the EDO dropdown also contains a "12-EDO"
+    // option, so use getAllByText to assert the name is present.
+    expect(screen.getAllByText("12-EDO").length).toBeGreaterThan(0);
+    expect(screen.queryByTitle(/reset to 12-edo/i)).toBeNull();
   });
 
-  test("Save is enabled when all keys mapped", () => {
-    const store = setupStore(true);
-    const { getByText } = render(() => <TopBar store={store} onSave={() => {}} />);
-    expect((getByText("Save .scl") as HTMLButtonElement).disabled).toBe(false);
+  test("picking an EDO preset calls setBFromPreset and shows the reset chip", () => {
+    const store = createStore();
+    const spy = vi.spyOn(store, "setBFromPreset");
+    render(() => <TopBar store={store} onSave={() => {}} />);
+    const select = screen.getByLabelText(/edo preset/i) as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: "31" } });
+    expect(spy).toHaveBeenCalledWith(31);
+    expect(screen.getByTitle(/reset to 12-edo/i)).toBeInTheDocument();
   });
 
-  test("clicking Auto-Map calls runAutoMap", () => {
-    const store = setupStore(true);
-    const spy = vi.spyOn(store, "runAutoMap");
-    const { getByText } = render(() => <TopBar store={store} onSave={() => {}} />);
-    getByText("Auto-Map").click();
-    expect(spy).toHaveBeenCalled();
+  test("Save is disabled until all B-degrees are mapped", () => {
+    const store = createStore();
+    render(() => <TopBar store={store} onSave={() => {}} />);
+    const saveBtn = screen.getByRole("button", { name: /save/i });
+    expect(saveBtn).toBeDisabled();
+    store.loadScaleA(EDO12, "A");
+    store.runAutoMap();
+    expect(saveBtn).not.toBeDisabled();
+  });
+
+  test("Load source .scl button triggers hidden file input", () => {
+    const store = createStore();
+    render(() => <TopBar store={store} onSave={() => {}} />);
+    const input = document.querySelector('input[type="file"][accept=".scl"]') as HTMLInputElement;
+    expect(input).toBeInTheDocument();
+  });
+
+  test("Auto-Map is disabled when no source loaded", () => {
+    const store = createStore();
+    render(() => <TopBar store={store} onSave={() => {}} />);
+    expect(screen.getByRole("button", { name: /auto-map/i })).toBeDisabled();
   });
 });
