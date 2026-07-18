@@ -1,31 +1,34 @@
-/** A single mapping assignment: dest key k → source degree. */
+/** A single mapping assignment: B-degree b → A-degree a. */
 export interface Assignment {
-  destKey: number; // 0-11
-  sourceDegree: number; // index into source scale's degrees array
+  bDegree: number;  // index into Scale B's degrees array
+  aDegree: number;  // index into Scale A's degrees array
 }
 
-/** Mapping from 12-EDO keys to source degrees. assignments[k] is null if unmapped. */
+/** Mapping from B-degrees to A-degrees. assignments[b] is null if unmapped.
+ *  Length === Scale B's degree count. */
 export interface Mapping {
   assignments: (Assignment | null)[];
 }
 
-/** Result of auto-mapping a single key: chosen degree + any tie alternative. */
+/** Result of auto-mapping a single B-degree: chosen A-degree + any tie alternative. */
 export interface TieResult {
-  destKey: number;
-  chosenDegree: number;
-  tieAltDegree: number | null;
+  bDegree: number;
+  chosenADegree: number;
+  tieAltADegree: number | null;
 }
 
-/** A collision: multiple dest keys mapped to the same source degree. */
+/** A collision (a.k.a. collapse): multiple B-degrees mapped to the same A-degree.
+ *  For A→B this is expected when A is sparser than B; flagged, never blocks export. */
 export interface Collision {
-  sourceDegree: number;
-  destKeys: number[];
+  aDegree: number;
+  bDegrees: number[];
 }
 
-/** Aggregate mapping quality stats. */
+/** Aggregate mapping quality stats. `collapses` counts B-degrees involved in any collision. */
 export interface MappingStats {
   mappedCount: number;
   unmappedCount: number;
+  collapses: number;
   avgError: number;
   maxError: number;
   collisions: number;
