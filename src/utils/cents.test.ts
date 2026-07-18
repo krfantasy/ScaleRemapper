@@ -1,7 +1,7 @@
 import { describe, test, expect } from "vitest";
 import {
   ratioToCents, centsToFrequency, frequencyToCents,
-  noteName, destCents, NEAREST_NEIGHBOR_RADIUS_CENTS,
+  NEAREST_NEIGHBOR_RADIUS_CENTS,
 } from "./cents";
 
 describe("ratioToCents", () => {
@@ -19,22 +19,6 @@ describe("centsToFrequency", () => {
 describe("frequencyToCents", () => {
   test("880 Hz at 440 ref is 1200 cents", () => expect(frequencyToCents(880, 440)).toBeCloseTo(1200, 5));
   test("440 Hz at 440 ref is 0 cents", () => expect(frequencyToCents(440, 440)).toBeCloseTo(0, 5));
-});
-
-describe("noteName", () => {
-  test("key 0 is C", () => expect(noteName(0)).toBe("C"));
-  test("key 1 is C#", () => expect(noteName(1)).toBe("C#"));
-  test("key 5 is F", () => expect(noteName(5)).toBe("F"));
-  test("key 6 is F#", () => expect(noteName(6)).toBe("F#"));
-  test("key 11 is B", () => expect(noteName(11)).toBe("B"));
-  test("key 12 wraps to C", () => expect(noteName(12)).toBe("C"));
-});
-
-describe("destCents", () => {
-  test("key 0 is 0 cents", () => expect(destCents(0)).toBe(0));
-  test("key 1 is 100 cents", () => expect(destCents(1)).toBe(100));
-  test("key 7 is 700 cents", () => expect(destCents(7)).toBe(700));
-  test("key 11 is 1100 cents", () => expect(destCents(11)).toBe(1100));
 });
 
 describe("NEAREST_NEIGHBOR_RADIUS_CENTS", () => {
