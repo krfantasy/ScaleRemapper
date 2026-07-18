@@ -16,14 +16,12 @@ describe("SidePanel", () => {
     const store = createStore();
     store.loadScaleA(EDO12_A, "A Scale");
     render(() => <SidePanel store={store} onAudition={() => {}} />);
-    expect(screen.getByText("A Scale")).toBeInTheDocument();
-    // Note count and period each appear twice (Scale A is 12-EDO; Scale B defaults
-    // to 12-EDO), and the number is wrapped in <strong>, so match against each
-    // candidate node's normalized textContent rather than a plain regex.
-    const matches = (re: RegExp) =>
-      screen.getAllByText((_, node) => !!node?.textContent && re.test(node.textContent));
-    expect(matches(/12 notes/i).length).toBeGreaterThanOrEqual(1);
-    expect(matches(/2\/1/i).length).toBeGreaterThanOrEqual(1);
+    // Scope to Scale A's section (the first <section>) so the assertion pins
+    // Scale A specifically, not just "some 12-notes/2-1 node anywhere".
+    const aSection = document.querySelectorAll("section")[0];
+    expect(aSection?.querySelector(".scale-name")?.textContent).toBe("A Scale");
+    expect(aSection?.textContent).toMatch(/12 notes/);
+    expect(aSection?.textContent).toMatch(/2\/1/);
   });
 
   test("Scale B section shows '12-EDO' with 12 notes by default", () => {
