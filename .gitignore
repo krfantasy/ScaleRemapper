@@ -17,6 +17,7 @@ dist-ssr
 
 # Tooling
 .superpowers/
+/docs/superpowers/
 
 # Editor directories and files
 .vscode/*
