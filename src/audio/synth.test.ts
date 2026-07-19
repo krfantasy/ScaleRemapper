@@ -28,7 +28,7 @@ function mockAudioContext() {
   };
   const makeGain = () => {
     const gain = {
-      gain: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), cancelScheduledValues: vi.fn() },
+      gain: { value: 0, setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), cancelScheduledValues: vi.fn() },
       connect: vi.fn(),
       disconnect: vi.fn(),
     };
@@ -88,7 +88,7 @@ describe("Synth", () => {
   test("envelope ramps to PEAK_GAIN over attack, then sustainLevel*PEAK_GAIN over decay", () => {
     const { ctx, gains } = mockAudioContext();
     const synth = new Synth(ctx as any);
-    synth.playNote(0, { ...DEFAULT_ENV, attackMs: 10, decayMs: 100, sustainLevel: 0.7 });
+    synth.playNote(0, DEFAULT_ENV);
     const g = gains[0].gain;
     // attack: 0 → PEAK_GAIN
     expect(g.linearRampToValueAtTime).toHaveBeenCalledWith(PEAK_GAIN, 0.01);
@@ -99,20 +99,25 @@ describe("Synth", () => {
   test("release ramps to 0 after hold", () => {
     const { ctx, gains } = mockAudioContext();
     const synth = new Synth(ctx as any);
-    synth.playNote(0, { ...DEFAULT_ENV, attackMs: 10, decayMs: 100, sustainLevel: 0.7, holdMs: 500, releaseMs: 200 });
+    synth.playNote(0, DEFAULT_ENV);
     const g = gains[0].gain;
     // hold ends at attack+decay+hold = 10+100+500 = 610ms; release ends +200ms = 810ms
     expect(g.linearRampToValueAtTime).toHaveBeenCalledWith(0, 0.81);
   });
 
-  test("monophonic retrigger: a second playNote stops the previous osc", () => {
-    const { ctx, oscs } = mockAudioContext();
+  test("monophonic retrigger: a second playNote stops the previous osc and ramps its gain to 0", () => {
+    const { ctx, oscs, gains } = mockAudioContext();
     const synth = new Synth(ctx as any);
     synth.playNote(0, DEFAULT_ENV);
     synth.playNote(100, DEFAULT_ENV);
     // The first oscillator must be stopped when the second note fires.
     expect(oscs[0].stop).toHaveBeenCalled();
     expect(oscs.length).toBe(2);
+    // Previous voice's gain is cut: cancel, anchor, ramp to 0.
+    const prevGain = gains[0].gain;
+    expect(prevGain.cancelScheduledValues).toHaveBeenCalled();
+    expect(prevGain.setValueAtTime).toHaveBeenCalled();
+    expect(prevGain.linearRampToValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
   });
 
   test("resume delegates to ctx.resume", async () => {

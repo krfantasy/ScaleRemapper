@@ -47,6 +47,9 @@ export class Synth {
       v.gain.gain.setValueAtTime(v.gain.gain.value, now);
       v.gain.gain.linearRampToValueAtTime(0, now + 0.005);
       v.osc.stop(now + 0.006);
+      // Drop the cut nodes out of the graph once the osc actually ends, so
+      // retriggers don't accumulate connected-but-silent nodes indefinitely.
+      v.osc.onended = () => { v.osc.disconnect(); v.gain.disconnect(); };
       this.voice = null;
     }
 
@@ -72,6 +75,8 @@ export class Synth {
     gain.connect(this.ctx.destination);
     osc.start(now);
     osc.stop(tReleaseEnd + 0.05);
+    // Same teardown for naturally-ended voices.
+    osc.onended = () => { osc.disconnect(); gain.disconnect(); };
 
     this.voice = { osc, gain };
   }
