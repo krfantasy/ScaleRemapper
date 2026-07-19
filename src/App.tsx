@@ -1,4 +1,4 @@
-import { createSignal, type Component } from "solid-js";
+import { createSignal, onCleanup, type Component } from "solid-js";
 import { createStore } from "./state/store";
 import { createAuditionController } from "./audio/audition-controller";
 import { TopBar } from "./components/TopBar";
@@ -38,6 +38,8 @@ const App: Component = () => {
     );
 
   const audition = createAuditionController(store);
+  // Tear down the AudioContext on unmount (HMR reloads, future App-level tests).
+  onCleanup(() => audition.dispose());
 
   function handleSave() {
     const a = store.scaleA();

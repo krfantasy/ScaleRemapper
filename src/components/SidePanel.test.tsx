@@ -89,6 +89,17 @@ describe("SidePanel", () => {
     expect(audition.enabled()).toBe(true);
   });
 
+  test("toggle gains the 'on' class when enabled (sole ON affordance per spec §5.2)", () => {
+    const store = createStore();
+    store.loadScaleA(EDO12_A, "A Scale");
+    const audition = makeAudition();
+    render(() => <SidePanel store={store} audition={audition} />);
+    const toggle = screen.getByRole("button", { name: /audition/i });
+    expect(toggle.classList.contains("on")).toBe(false);
+    fireEvent.click(toggle);
+    expect(toggle.classList.contains("on")).toBe(true);
+  });
+
   test("five sliders render (attack, decay, sustain, hold, release)", () => {
     const store = createStore();
     store.loadScaleA(EDO12_A, "A Scale");

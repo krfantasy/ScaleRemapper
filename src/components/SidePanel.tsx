@@ -48,7 +48,7 @@ export const SidePanel: Component<Props> = (props) => {
     label: string,
   ) {
     const range = TIME_RANGES[key];
-    const value = () => s()[key] as number;
+    const value = () => s()[key];
     const pos = () => valueToPos(value(), range.min, range.max) * SLIDER_MAX;
     const onInput = (e: Event) => {
       const target = e.target as HTMLInputElement;
