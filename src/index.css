@@ -318,3 +318,52 @@ body {
   white-space: nowrap;
   z-index: 10;
 }
+
+/* Audition toggle + ADSR sliders */
+.audition-toggle {
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  background: #fff;
+  margin-bottom: 0.5rem;
+}
+.audition-toggle.on {
+  background: #3b82f6;
+  color: #fff;
+  border-color: #3b82f6;
+}
+
+.audition-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-top: 0.25rem;
+}
+.slider-row {
+  display: grid;
+  grid-template-columns: 3.5rem 1fr 3rem;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.6875rem;
+}
+.slider-label {
+  color: #666;
+}
+.slider-row input[type="range"] {
+  width: 100%;
+}
+.slider-row select {
+  padding: 0.125rem 0.25rem;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-size: 0.6875rem;
+  background: #fff;
+}
+.slider-value {
+  color: #333;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

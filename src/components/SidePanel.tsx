@@ -1,11 +1,13 @@
-import { Show, type Component } from "solid-js";
+import { For, Show, type Component } from "solid-js";
 import type { Store } from "../state/store";
-import type { Waveform } from "../audio/synth";
+import type { AuditionController, AuditionSettings } from "../audio/audition-controller";
 import type { LoadedScale } from "../scl/types";
+import type { Waveform } from "../audio/synth";
+import { posToValue, valueToPos } from "../utils/log-scale";
 
 interface Props {
   store: Store;
-  onAudition: (kind: "remapped" | "b") => void;
+  audition: AuditionController;
 }
 
 function ScaleBlock(props: { loaded: LoadedScale | null; fallback: string }) {
@@ -19,8 +21,54 @@ function ScaleBlock(props: { loaded: LoadedScale | null; fallback: string }) {
   );
 }
 
+// Range metadata per slider. Sustain is a level (0–1, linear); the others are
+// log-scale time sliders.
+const TIME_RANGES = {
+  attackMs: { min: 1, max: 2000 },
+  decayMs: { min: 1, max: 2000 },
+  releaseMs: { min: 1, max: 3000 },
+  holdMs: { min: 50, max: 5000 },
+} as const;
+
+function formatMs(ms: number): string {
+  if (ms < 1000) return `${Math.round(ms)} ms`;
+  return `${(ms / 1000).toFixed(2)} s`;
+}
+
 export const SidePanel: Component<Props> = (props) => {
   const sel = () => props.store.selected();
+  const s = () => props.audition.settings();
+  const enabled = () => props.audition.enabled();
+
+  // Slider value is a 0..1000 integer; converted to/from the actual time via log-scale.
+  const SLIDER_MAX = 1000;
+
+  function timeSliderField<K extends keyof typeof TIME_RANGES>(
+    key: K,
+    label: string,
+  ) {
+    const range = TIME_RANGES[key];
+    const value = () => s()[key] as number;
+    const pos = () => valueToPos(value(), range.min, range.max) * SLIDER_MAX;
+    const onInput = (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      const pos01 = Number(target.value) / SLIDER_MAX;
+      const v = posToValue(pos01, range.min, range.max);
+      props.audition.updateSettings({ [key]: v } as Partial<AuditionSettings>);
+    };
+    return (
+      <label class="slider-row">
+        <span class="slider-label">{label}</span>
+        <input
+          type="range" min={0} max={SLIDER_MAX} step={1}
+          aria-label={label}
+          value={pos()}
+          onInput={onInput}
+        />
+        <span class="slider-value">{formatMs(value())}</span>
+      </label>
+    );
+  }
 
   return (
     <div class="side-panel">
@@ -44,18 +92,49 @@ export const SidePanel: Component<Props> = (props) => {
         <hr />
         <section>
           <div class="label">Audition</div>
-          <div class="audition-buttons">
-            <button onClick={() => props.onAudition("remapped")}>▶ Remapped</button>
-            <button onClick={() => props.onAudition("b")}>▶ {props.store.scaleB().name}</button>
-          </div>
-          <div class="waveform-select">
-            <span>wave</span>
-            <select onChange={(e) => props.store.setWaveform((e.target as HTMLSelectElement).value as Waveform)}>
-              <option value="sine">sine</option>
-              <option value="square">square</option>
-              <option value="triangle">triangle</option>
-              <option value="sawtooth">saw</option>
-            </select>
+          <button
+            class="audition-toggle"
+            classList={{ on: enabled() }}
+            onClick={() => props.audition.setEnabled(!enabled())}
+          >
+            🎧 Audition: {enabled() ? "On" : "Off"}
+          </button>
+          <div class="audition-sliders">
+            <label class="slider-row">
+              <span class="slider-label">wave</span>
+              <select
+                aria-label="wave"
+                value={s().waveform}
+                onChange={(e) =>
+                  props.audition.updateSettings({
+                    waveform: (e.target as HTMLSelectElement).value as Waveform,
+                  })
+                }
+              >
+                <option value="sine">sine</option>
+                <option value="square">square</option>
+                <option value="triangle">triangle</option>
+                <option value="sawtooth">saw</option>
+              </select>
+            </label>
+            {timeSliderField("attackMs", "Attack")}
+            {timeSliderField("decayMs", "Decay")}
+            <label class="slider-row">
+              <span class="slider-label">Sustain</span>
+              <input
+                type="range" min={0} max={1} step={0.01}
+                aria-label="Sustain"
+                value={s().sustainLevel}
+                onInput={(e) =>
+                  props.audition.updateSettings({
+                    sustainLevel: Number((e.target as HTMLInputElement).value),
+                  })
+                }
+              />
+              <span class="slider-value">{s().sustainLevel.toFixed(2)}</span>
+            </label>
+            {timeSliderField("holdMs", "Hold")}
+            {timeSliderField("releaseMs", "Release")}
           </div>
         </section>
         <hr />

@@ -1,6 +1,6 @@
 import { createSignal, type Component } from "solid-js";
 import { createStore } from "./state/store";
-import { Synth } from "./audio/synth";
+import { createAuditionController } from "./audio/audition-controller";
 import { TopBar } from "./components/TopBar";
 import { CircleViz } from "./components/CircleViz";
 import { SidePanel } from "./components/SidePanel";
@@ -37,30 +37,7 @@ const App: Component = () => {
       Math.max(PREVIEW_MIN, Math.min(Math.floor(window.innerHeight * 0.6), h - delta)),
     );
 
-  let synth: Synth | null = null;
-  function getSynth(): Synth {
-    if (!synth) {
-      const ctx = new AudioContext();
-      synth = new Synth(ctx);
-    }
-    return synth;
-  }
-
-  function handleAudition(kind: "remapped" | "b") {
-    const sel = store.selected();
-    if (!sel || sel.ring !== "B") return; // only B-dots have a "remapped vs B-pure" A/B
-    const bDegree = sel.degree;
-    const s = getSynth();
-    s.setWaveform(store.waveform());
-    void s.resume();
-    if (kind === "remapped") {
-      const a = store.mapping().assignments[bDegree];
-      if (!a) return;
-      s.playNote(store.aCents()[a.aDegree]);
-    } else {
-      s.playNote(store.bCents()[bDegree]);
-    }
-  }
+  const audition = createAuditionController(store);
 
   function handleSave() {
     const a = store.scaleA();
@@ -89,7 +66,7 @@ const App: Component = () => {
         </div>
         <Splitter orientation="vertical" onDrag={onSidePanelDrag} />
         <div class="side-panel-wrap" style={{ width: `${sidePanelWidth()}px` }}>
-          <SidePanel store={store} onAudition={handleAudition} />
+          <SidePanel store={store} audition={audition} />
         </div>
       </div>
       <Splitter orientation="horizontal" onDrag={onPreviewDrag} />
