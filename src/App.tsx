@@ -22,15 +22,19 @@ const App: Component = () => {
   const [sidePanelWidth, setSidePanelWidth] = createSignal(250);
   const [previewHeight, setPreviewHeight] = createSignal(160);
 
-  // Vertical splitter (between CircleViz and SidePanel): dragging right grows
-  // the side panel, so add the signed delta. Clamp to [SIDE_PANEL_MIN, SIDE_PANEL_MAX].
+  // Vertical splitter (between CircleViz and SidePanel): dragging the boundary
+  // LEFT shrinks the side panel, RIGHT grows it. Standard splitter convention —
+  // the delta sign already matches "right = grow", but we negate so the drag
+  // direction feels natural (drag toward the panel to shrink it).
+  // Actually: delta is +when moving right; SidePanel is on the RIGHT, so moving
+  // the handle right (into the panel) should SHRINK it → negate.
   const onSidePanelDrag = (delta: number) =>
-    setSidePanelWidth((w) => Math.max(SIDE_PANEL_MIN, Math.min(SIDE_PANEL_MAX, w + delta)));
-  // Horizontal splitter (between main row and PreviewBox): dragging DOWN grows
-  // the preview, so add the signed delta. Clamp to [PREVIEW_MIN, 60% of viewport].
+    setSidePanelWidth((w) => Math.max(SIDE_PANEL_MIN, Math.min(SIDE_PANEL_MAX, w - delta)));
+  // Horizontal splitter (between main row and PreviewBox): PreviewBox is BELOW.
+  // Moving the handle DOWN (into the preview) should SHRINK it → negate.
   const onPreviewDrag = (delta: number) =>
     setPreviewHeight((h) =>
-      Math.max(PREVIEW_MIN, Math.min(Math.floor(window.innerHeight * 0.6), h + delta)),
+      Math.max(PREVIEW_MIN, Math.min(Math.floor(window.innerHeight * 0.6), h - delta)),
     );
 
   let synth: Synth | null = null;
