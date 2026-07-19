@@ -140,4 +140,25 @@ describe("CircleViz", () => {
     // the early-return. Coverage of the early-return comes from spec review and
     // manual Playwright testing (plan §7.3).
   });
+
+  test("octave-wrapped assignment renders a connector and an octave label", () => {
+    const store = createStore();
+    // Thai Ranat A (period 1200¢), hand-rolled non-octave B extending past 1200¢.
+    const thaiA = `! thai.scl\nThai\n7\n!\n161.0\n346.0\n526.0\n686.0\n862.0\n1028.571\n1200.0`;
+    store.loadScaleA(thaiA, "Thai");
+    const longB = `! long.scl\nLong\n3\n!\n800.0\n1400.0\n2400.0`;
+    store.loadScaleB(longB, "Long");
+    // B-degrees: 0 (0¢), 1 (800¢), 2 (1400¢), 3 (2400¢ period). Mappable: 0, 1, 2.
+    // Connect B-2 (1400¢) → A-1 (161¢). n = round((1400-161)/1200) = 1.
+    // Sounded = 1361¢. Dev = -39¢ (red band). The test only asserts existence
+    // of the connector and the +1 label, not the colour — colour is covered by
+    // the deviation tests in mapping/deviation.test.ts.
+    store.connect(2, 1);
+    const { container } = render(() => <CircleViz store={store} audition={stubAudition()} />);
+    const connector = container.querySelector('line[data-role="connector"][data-bdegree="2"]');
+    expect(connector).not.toBeNull();
+    const label = container.querySelector('[data-role="octave-label"][data-bdegree="2"]');
+    expect(label).not.toBeNull();
+    expect(label?.textContent).toMatch(/\+1/);
+  });
 });

@@ -1,6 +1,7 @@
 import { For, Show, createSignal, createMemo, createEffect, onMount, onCleanup, type Component } from "solid-js";
 import type { Store } from "../state/store";
 import type { AuditionController } from "../audio/audition-controller";
+import { displacedCents, octaveDisplacement } from "../mapping/displacement";
 import { noteName } from "../scl/edo";
 import { findCollisions } from "../mapping/deviation";
 
@@ -138,7 +139,11 @@ export const CircleViz: Component<Props> = (props) => {
     const aDeg = d.ring === "outer" ? d.aDegree : t.ring === "outer" ? t.aDegree : -1;
     const bDeg = d.ring === "inner" ? d.bDegree : t.ring === "inner" ? t.bDegree : -1;
     if (aDeg < 0 || bDeg < 0) return "#999";
-    const dev = aCents()[aDeg] - bCents()[bDeg];
+    const ac = aCents(), bc = bCents();
+    // Use the STORE's periodA for displacement (0 when A is root-only), NOT the
+    // local geometry periodA() helper (which defaults to 1200 for drawing).
+    const pA = props.store.periodA();
+    const dev = displacedCents(aDeg, bDeg, ac, bc, pA) - bc[bDeg];
     return deviationColor(dev);
   };
 
@@ -255,9 +260,15 @@ export const CircleViz: Component<Props> = (props) => {
                 {(a) => (
                   <Show when={a}>
                     {(assign) => {
-                      const srcCents = aCents()[assign().aDegree];
-                      const dev = srcCents - bCents()[assign().bDegree];
+                      const ac = aCents(), bc = bCents();
+                      // STORE periodA for displacement (0 when A is root-only);
+                      // LOCAL periodA() for geometry below (defaults to 1200 for drawing).
+                      const pA = props.store.periodA();
+                      const sounded = displacedCents(assign().aDegree, assign().bDegree, ac, bc, pA);
+                      const dev = sounded - bc[assign().bDegree];
+                      const n = octaveDisplacement(assign().aDegree, assign().bDegree, ac, bc, pA);
                       const inner = innerDots().find((d) => d.bDegree === assign().bDegree)!;
+                      const srcCents = ac[assign().aDegree];
                       const x2 = dotX(srcCents, periodA(), R_OUTER), y2 = dotY(srcCents, periodA(), R_OUTER);
                       return (
                         <>
@@ -269,6 +280,15 @@ export const CircleViz: Component<Props> = (props) => {
                             stroke="transparent" stroke-width="14" stroke-linecap="round"
                             style={{ cursor: "pointer" }}
                             onDblClick={() => props.store.disconnect(assign().bDegree)} />
+                          {/* Octave label: shown only when the assignment is wrapped
+                              (n !== 0). Sits near the A-dot end of the connector. */}
+                          {n !== 0 && (
+                            <text data-role="octave-label" data-bdegree={assign().bDegree}
+                              x={x2 + 8} y={y2 - 4}
+                              font-size="8" font-weight="bold" fill="#f59e0b" pointer-events="none">
+                              {n > 0 ? `+${n}` : `${n}`}oct
+                            </text>
+                          )}
                         </>
                       );
                     }}
@@ -353,13 +373,19 @@ export const CircleViz: Component<Props> = (props) => {
                         }}
                         onMouseOver={() => {
                           const a = props.store.mapping().assignments[dot.bDegree];
-                          const cents = a ? aCents()[a.aDegree] : null;
-                          const dev = cents !== null ? cents - bCents()[dot.bDegree] : null;
+                          const ac = aCents(), bc = bCents();
+                          const pA = props.store.periodA();
+                          if (!a) {
+                            setHovered({ x: dot.x, y: dot.y, text: `${dot.label} (unmapped)` });
+                            return;
+                          }
+                          const n = octaveDisplacement(a.aDegree, dot.bDegree, ac, bc, pA);
+                          const sounded = displacedCents(a.aDegree, dot.bDegree, ac, bc, pA);
+                          const dev = sounded - bc[dot.bDegree];
+                          const octLabel = n !== 0 ? ` ${n > 0 ? `+${n}` : n}oct` : "";
                           setHovered({
                             x: dot.x, y: dot.y,
-                            text: dev !== null
-                              ? `${dot.label} → A-degree ${a!.aDegree} (${cents!.toFixed(1)}¢) dev ${dev > 0 ? "+" : ""}${dev.toFixed(1)}¢`
-                              : `${dot.label} (unmapped)`,
+                            text: `${dot.label} → A-degree ${a.aDegree}${octLabel} (${sounded.toFixed(1)}¢) dev ${dev > 0 ? "+" : ""}${dev.toFixed(1)}¢`,
                           });
                         }}
                         onMouseOut={() => setHovered(null)}
