@@ -5,7 +5,7 @@ import { findCollisions } from "../mapping/deviation";
 
 interface Props { store: Store; }
 
-const CX = 200, CY = 200, R_OUTER = 150, R_INNER = 100;
+const CX = 200, CY = 200, R_OUTER = 180, R_INNER = 120;
 const TAU = Math.PI * 2;
 
 /** Angle for a cents value, scaled by the given period. 0¢ at top, clockwise. */
@@ -86,12 +86,11 @@ export const CircleViz: Component<Props> = (props) => {
     return { x: p.x, y: p.y };
   }
 
-  // "Fit" (zoom=1) renders the ring at ZOOM_STEP × the container's smaller
-  // dimension — i.e. the same size the old zoom=1.2 produced. The zoom signal
-  // stays centred at 1, so in/out stay symmetric and "Reset to fit" lands here.
-  const size = createMemo(() =>
-    Math.max(0, Math.min(availWidth(), availHeight()) * ZOOM_STEP * zoom()),
-  );
+  // Fit (zoom=1) = the ring's canvas equals the container's smaller dimension,
+  // so it always fits without scrolling. The ring itself is made visually large
+  // by R_OUTER/R_INNER filling ~90% of the 400-wide viewBox (see constants
+  // above) — no need to enlarge the canvas past the container.
+  const size = createMemo(() => Math.max(0, Math.min(availWidth(), availHeight()) * zoom()));
 
   // B inner dots, data-driven.
   // Each dot carries:
