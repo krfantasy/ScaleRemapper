@@ -62,20 +62,24 @@ export function createAuditionController(
   // close it on dispose(). An injected synth (tests, or a future caller that
   // manages lifetime itself) is left alone.
   let ownedCtx: AudioContext | null = null;
-  const synth: Synth = deps.synth ?? (() => {
+  let synth: Synth;
+  if (deps.synth) {
+    synth = deps.synth;
+  } else {
     ownedCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    return new Synth(ownedCtx);
-  })();
+    synth = new Synth(ownedCtx);
+  }
 
   function updateSettings(patch: Partial<AuditionSettings>): void {
+    // Side effects on the synth happen OUTSIDE the signal updater — Solid
+    // updaters must be pure (they may be re-invoked or discarded under batching).
+    if (patch.waveform !== undefined) synth.setWaveform(patch.waveform);
     setSettings((prev) => {
       const next = { ...prev, ...patch };
-      next.attackMs = clamp(next.attackMs, RANGES.attackMs.min, RANGES.attackMs.max);
-      next.decayMs = clamp(next.decayMs, RANGES.decayMs.min, RANGES.decayMs.max);
-      next.sustainLevel = clamp(next.sustainLevel, RANGES.sustainLevel.min, RANGES.sustainLevel.max);
-      next.releaseMs = clamp(next.releaseMs, RANGES.releaseMs.min, RANGES.releaseMs.max);
-      next.holdMs = clamp(next.holdMs, RANGES.holdMs.min, RANGES.holdMs.max);
-      if (patch.waveform !== undefined) synth.setWaveform(patch.waveform);
+      // Table-driven clamp: every numeric setting is guarded by its RANGES entry.
+      (Object.keys(RANGES) as (keyof typeof RANGES)[]).forEach((k) => {
+        next[k] = clamp(next[k], RANGES[k].min, RANGES[k].max);
+      });
       return next;
     });
   }
