@@ -178,3 +178,15 @@ describe("store — derived", () => {
     expect(s.bCents().length).toBe(20);
   });
 });
+
+describe("store — periodA memo", () => {
+  test("periodA is 0 when A is null", () => {
+    expect(createStore().periodA()).toBe(0);
+  });
+
+  test("periodA is the last degree's cents when A is loaded", () => {
+    const s = createStore();
+    s.loadScaleA(EDO12_A, "A");
+    expect(s.periodA()).toBe(1200);
+  });
+});
