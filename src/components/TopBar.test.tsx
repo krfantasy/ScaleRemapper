@@ -49,9 +49,18 @@ describe("TopBar", () => {
     expect(input).toBeInTheDocument();
   });
 
-  test("Auto-Map is disabled when no source loaded", () => {
+  test("Auto-Map and Random-Map are disabled when no source loaded", () => {
     const store = createStore();
     render(() => <TopBar store={store} onSave={() => {}} />);
     expect(screen.getByRole("button", { name: /auto-map/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /random-map/i })).toBeDisabled();
+  });
+
+  test("Auto-Map and Random-Map enable after a source scale is loaded", () => {
+    const store = createStore();
+    store.loadScaleA(EDO12, "A");
+    render(() => <TopBar store={store} onSave={() => {}} />);
+    expect(screen.getByRole("button", { name: /auto-map/i })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /random-map/i })).not.toBeDisabled();
   });
 });

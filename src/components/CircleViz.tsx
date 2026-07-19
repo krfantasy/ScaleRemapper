@@ -86,7 +86,12 @@ export const CircleViz: Component<Props> = (props) => {
     return { x: p.x, y: p.y };
   }
 
-  const size = createMemo(() => Math.max(0, Math.min(availWidth(), availHeight()) * zoom()));
+  // "Fit" (zoom=1) renders the ring at ZOOM_STEP × the container's smaller
+  // dimension — i.e. the same size the old zoom=1.2 produced. The zoom signal
+  // stays centred at 1, so in/out stay symmetric and "Reset to fit" lands here.
+  const size = createMemo(() =>
+    Math.max(0, Math.min(availWidth(), availHeight()) * ZOOM_STEP * zoom()),
+  );
 
   // B inner dots, data-driven.
   // Each dot carries:

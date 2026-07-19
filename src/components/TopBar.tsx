@@ -58,6 +58,7 @@ export const TopBar: Component<Props> = (props) => {
           )}
         </div>
         <button disabled={props.store.scaleA() === null} onClick={() => props.store.runAutoMap()}>⚡ Auto-Map</button>
+        <button disabled={props.store.scaleA() === null} onClick={() => props.store.runRandomMap()}>🎲 Random-Map</button>
         <button onClick={() => props.store.clearMapping()}>✕ Clear</button>
         <button disabled={!canSave()} onClick={() => props.onSave()}>💾 Save .scl</button>
       </div>

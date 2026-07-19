@@ -1,6 +1,6 @@
 import { createSignal, createMemo } from "solid-js";
 import { parseScl } from "../scl/parser";
-import { autoMap } from "../mapping/autoMap";
+import { autoMap, randomMap } from "../mapping/autoMap";
 import { computeStats } from "../mapping/deviation";
 import { edoScale } from "../scl/edo";
 import type { Mapping, Assignment } from "../mapping/types";
@@ -69,6 +69,14 @@ export function createStore() {
     setMapping(m);
   }
 
+  function runRandomMap(): void {
+    const a = aCents();
+    const b = bCents();
+    if (a.length === 0 || b.length === 0) return;
+    const { mapping: m } = randomMap(a, b);
+    setMapping(m);
+  }
+
   function connect(bDegree: number, aDegree: number): void {
     setMapping((prev) => {
       const assignments = [...prev.assignments];
@@ -113,6 +121,7 @@ export function createStore() {
     setBFromPreset,
     resetBToDefault,
     runAutoMap,
+    runRandomMap,
     connect,
     disconnect,
     clearMapping,

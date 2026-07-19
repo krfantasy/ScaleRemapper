@@ -101,6 +101,24 @@ describe("store — mapping ops", () => {
     expect(s.mapping().assignments.every((a) => a === null)).toBe(true);
   });
 
+  test("runRandomMap fills all B-degrees with valid A-degree assignments", () => {
+    const s = createStore();
+    s.loadScaleA(EDO12_A, "A");
+    s.runRandomMap();
+    const m = s.mapping().assignments;
+    expect(m.every((a) => a !== null)).toBe(true);
+    expect(m.length).toBe(s.bCents().length - 1);
+    // A-degree must be a valid index (not A's period).
+    const aLast = s.aCents().length - 1;
+    for (const a of m) expect(a!.aDegree).toBeLessThan(aLast);
+  });
+
+  test("runRandomMap is a no-op when A is not loaded", () => {
+    const s = createStore();
+    s.runRandomMap();
+    expect(s.mapping().assignments.every((a) => a === null)).toBe(true);
+  });
+
   test("connect writes assignments[bDegree]", () => {
     const s = createStore();
     s.loadScaleA(EDO12_A, "A");
