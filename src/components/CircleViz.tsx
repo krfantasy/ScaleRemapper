@@ -185,7 +185,10 @@ export const CircleViz: Component<Props> = (props) => {
       if (props.audition.enabled()) {
         if (moved <= 4) {
           void props.audition.resume();
-          props.audition.playDot(d.ring === "outer" ? "A" : "B", d.ring === "outer" ? (d as any).aDegree : (d as any).bDegree);
+          // DragFrom is a discriminated union on `ring`; TS narrows through the
+          // branch, so no cast is needed (matches the OFF-path's connect calls).
+          if (d.ring === "outer") props.audition.playDot("A", d.aDegree);
+          else props.audition.playDot("B", d.bDegree);
         }
         setDrag(null); setCursor(null); setDropTarget(null);
         return;  // no select, no connect while ON

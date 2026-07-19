@@ -121,7 +121,7 @@ describe("CircleViz", () => {
     expect(playDot).toHaveBeenCalledWith("A", 4);
   });
 
-  test("audition ON: drag beyond threshold + drop does NOT connect", () => {
+  test("audition ON: drag beyond threshold does NOT connect", () => {
     const store = createStore();
     store.loadScaleA(EDO12_A, "A");
     const playDot = vi.fn();
@@ -134,5 +134,10 @@ describe("CircleViz", () => {
     // No assignment written, no selection made, no playDot on a drag.
     expect(store.mapping().assignments[3]).toBeNull();
     expect(store.selected()).toBeNull();
+    // NOTE: the onMove early-return (no rubber-band / drop-target while ON) is
+    // not directly testable in jsdom — getScreenCTM() returns null, so the
+    // rubber-band <Show when={drag() && cursor()}> never mounts regardless of
+    // the early-return. Coverage of the early-return comes from spec review and
+    // manual Playwright testing (plan §7.3).
   });
 });
