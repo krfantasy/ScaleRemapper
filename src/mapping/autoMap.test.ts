@@ -9,32 +9,30 @@ const EDO19 = [0, 63.158, 126.316, 189.474, 252.632, 315.789, 378.947, 442.105,
 // 12-EDO as Scale B.
 const EDO12 = Array.from({ length: 13 }, (_, i) => i * 100); // [0,100,...,1200]
 
-describe("autoMap(aCents, bCents)", () => {
+describe("autoMap(aCents, bCents, periodA)", () => {
   test("produces one assignment per B-degree (excluding B's period)", () => {
-    // B has 13 degrees (0..12); we map degrees 0..11, not 12 (B's period).
-    const { mapping } = autoMap(EDO19, EDO12);
+    const { mapping } = autoMap(EDO19, EDO12, 1200);
     expect(mapping.assignments).toHaveLength(12);
     expect(mapping.assignments.every((a) => a !== null)).toBe(true);
   });
 
   test("B-degree 0 maps to A-degree 0 (root)", () => {
-    const { mapping } = autoMap(EDO19, EDO12);
+    const { mapping } = autoMap(EDO19, EDO12, 1200);
     expect(mapping.assignments[0]?.aDegree).toBe(0);
   });
 
   test("B-degree 1 (100¢) maps to nearest A-degree (degree 2, 126.316¢)", () => {
-    const { mapping } = autoMap(EDO19, EDO12);
+    const { mapping } = autoMap(EDO19, EDO12, 1200);
     expect(mapping.assignments[1]?.aDegree).toBe(2);
   });
 
   test("B-degree 2 (200¢) maps to nearest A-degree (degree 3, 189.474¢)", () => {
-    const { mapping } = autoMap(EDO19, EDO12);
+    const { mapping } = autoMap(EDO19, EDO12, 1200);
     expect(mapping.assignments[2]?.aDegree).toBe(3);
   });
 
   test("exact tie breaks to lower A-degree", () => {
-    // B-degree 6 (600¢) is exactly between A-degree 9 (568.421¢) and 10 (631.579¢)
-    const { mapping, ties } = autoMap(EDO19, EDO12);
+    const { mapping, ties } = autoMap(EDO19, EDO12, 1200);
     expect(mapping.assignments[6]?.aDegree).toBe(9); // lower wins
     const tie = ties.find((t) => t.bDegree === 6);
     expect(tie).toBeDefined();
@@ -42,33 +40,79 @@ describe("autoMap(aCents, bCents)", () => {
   });
 
   test("never assigns to A's period (last A-degree, 1200¢)", () => {
-    const { mapping } = autoMap(EDO19, EDO12);
+    const { mapping } = autoMap(EDO19, EDO12, 1200);
     for (const a of mapping.assignments) {
       expect(a?.aDegree).not.toBe(EDO19.length - 1);
     }
   });
 
   test("collapses: when A is sparser than B, multiple B-degrees map to the same A-degree", () => {
-    // A = a 5-note scale (root + 3 entries + period): 0, 150, 400, 800, 1200.
-    // Chosen so B-degrees 1 (100¢) and 2 (200¢) both nearest A-degree 1 (150¢) — no ties.
     const sparseA = [0, 150, 400, 800, 1200];
-    // B = 12-EDO (degrees 0..11)
-    const { mapping } = autoMap(sparseA, EDO12);
-    // B-degree 1 (100¢): |100-0|=100, |100-150|=50 → A-degree 1.
-    // B-degree 2 (200¢): |200-150|=50, |200-400|=200 → A-degree 1. Collapse.
+    const { mapping } = autoMap(sparseA, EDO12, 1200);
     expect(mapping.assignments[1]?.aDegree).toBe(1);
     expect(mapping.assignments[2]?.aDegree).toBe(1);
-    // Both B-degrees share A-degree 1 — this is the expected collapse, not an error.
     const aDeg1 = mapping.assignments.filter((a) => a?.aDegree === 1);
     expect(aDeg1.length).toBe(2);
   });
 
   test("works with non-octave B (Bohlen-Pierce-shaped period)", () => {
-    // B = 3 evenly-spaced notes over 1901.955¢ (a toy BP-ish scale). period = degree 3.
     const bpB = [0, 1901.955 / 3, (1901.955 / 3) * 2, 1901.955];
-    const { mapping } = autoMap(EDO19, bpB);
-    expect(mapping.assignments).toHaveLength(3); // B-degrees 0,1,2 (period at 3 excluded)
+    const { mapping } = autoMap(EDO19, bpB, 1200);
+    expect(mapping.assignments).toHaveLength(3);
     expect(mapping.assignments.every((a) => a !== null)).toBe(true);
+  });
+
+  test("regression: same-period (A period === B period) produces n=0 everywhere", () => {
+    const { mapping } = autoMap(EDO19, EDO12, 1200);
+    for (let b = 0; b < EDO12.length - 1; b++) {
+      const target = EDO12[b];
+      let nearestK = 0;
+      let nearestDist = Infinity;
+      for (let k = 0; k < EDO19.length - 1; k++) {
+        const d = Math.abs(EDO19[k] - target);
+        if (d < nearestDist) { nearestDist = d; nearestK = k; }
+      }
+      expect(mapping.assignments[b]?.aDegree).toBe(nearestK);
+    }
+  });
+
+  test("octave wrap: Thai Ranat → 11 ED3 finds true nearest across octaves", () => {
+    const A = [0, 161, 346, 526, 686, 862, 1028.571, 1200];
+    const B = [0, 172.905, 345.810, 518.715, 691.620, 864.525, 1037.430,
+      1210.335, 1383.240, 1556.145, 1729.050, 1901.955];
+    const { mapping } = autoMap(A, B, 1200);
+    expect(mapping.assignments).toHaveLength(11);
+    expect(mapping.assignments[0]?.aDegree).toBe(0);
+    expect(mapping.assignments[1]?.aDegree).toBe(1);
+    expect(mapping.assignments[2]?.aDegree).toBe(2);
+    expect(mapping.assignments[3]?.aDegree).toBe(3);
+    expect(mapping.assignments[4]?.aDegree).toBe(4);
+    expect(mapping.assignments[5]?.aDegree).toBe(5);
+    expect(mapping.assignments[6]?.aDegree).toBe(6);
+    expect(mapping.assignments[7]?.aDegree).toBe(0);   // B-7 → A-0 + 1oct
+    expect(mapping.assignments[8]?.aDegree).toBe(1);   // B-8 → A-1 + 1oct
+    expect(mapping.assignments[9]?.aDegree).toBe(2);   // B-9 → A-2 + 1oct
+    expect(mapping.assignments[10]?.aDegree).toBe(3);  // B-10 → A-3 + 1oct
+  });
+
+  test("octave wrap: max deviation stays small (< 25¢) for Thai Ranat → 11 ED3", () => {
+    const A = [0, 161, 346, 526, 686, 862, 1028.571, 1200];
+    const B = [0, 172.905, 345.810, 518.715, 691.620, 864.525, 1037.430,
+      1210.335, 1383.240, 1556.145, 1729.050, 1901.955];
+    const { mapping } = autoMap(A, B, 1200);
+    let maxDev = 0;
+    for (let b = 0; b < B.length - 1; b++) {
+      const a = mapping.assignments[b]!;
+      const n = Math.round((B[b] - A[a.aDegree]) / 1200);
+      const dev = Math.abs(A[a.aDegree] + n * 1200 - B[b]);
+      if (dev > maxDev) maxDev = dev;
+    }
+    expect(maxDev).toBeLessThan(25);
+  });
+
+  test("periodA = 0 (A root-only): every B-degree maps to A-0, no throw", () => {
+    const { mapping } = autoMap([0], EDO12, 0);
+    expect(mapping.assignments.every((a) => a?.aDegree === 0)).toBe(true);
   });
 });
 
