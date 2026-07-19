@@ -95,6 +95,8 @@ export const SidePanel: Component<Props> = (props) => {
           <button
             class="audition-toggle"
             classList={{ on: enabled() }}
+            title="When ON, click a dot to hear its pitch. Mapping edits are disabled while ON."
+            aria-label="Audition mode toggle"
             onClick={() => props.audition.setEnabled(!enabled())}
           >
             🎧 Audition: {enabled() ? "On" : "Off"}
