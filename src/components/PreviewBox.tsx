@@ -2,6 +2,7 @@ import { createSignal, For, Show, createMemo, type Component } from "solid-js";
 import type { Store } from "../state/store";
 import { noteName } from "../scl/edo";
 import { serializeMappingToScl } from "../scl/serializer";
+import { displacedCents } from "../mapping/displacement";
 
 interface Props { store: Store; }
 
@@ -25,9 +26,12 @@ export const PreviewBox: Component<Props> = (props) => {
     const aCents = props.store.aCents();
     const bCents = props.store.bCents();
     const bLoaded = props.store.scaleB();
+    const periodA = props.store.periodA();
     return props.store.mapping().assignments.map((a, b) => {
       if (!a) return { bDegree: b, label: labelFor(b, bCents[b], bLoaded.origin), dev: null as number | null };
-      const dev = aCents[a.aDegree] - bCents[b];
+      // Use displacedCents (single source of truth for the wrap rule) so the
+      // readable deviation matches the connector colour and the sounded pitch.
+      const dev = displacedCents(a.aDegree, b, aCents, bCents, periodA) - bCents[b];
       return { bDegree: b, label: labelFor(b, bCents[b], bLoaded.origin), dev };
     });
   });

@@ -73,4 +73,27 @@ describe("PreviewBox", () => {
     const lines = (pre?.textContent ?? "").split("\n").filter((l) => l.trim() !== "");
     expect(lines.length).toBe(12);
   });
+
+  test("readable view deviation uses displaced cents for wrapped assignments", () => {
+    // Regression for the integration bug where the readable view bypassed
+    // displacedCents and showed the within-period deviation. Thai Ranat A
+    // (period 1200¢), 11 ED3 B (period 1901.955¢); B-10 → A-3 +1oct should
+    // show ~-3¢ (green), not ~-1203¢ (red, the pre-fix within-period value).
+    const store = setupStore();
+    const thaiA = `! thai.scl\nThai\n7\n!\n161.0\n346.0\n526.0\n686.0\n862.0\n1028.571\n1200.0`;
+    const ed3B = `! 11.scl\n11 ED3\n11\n!\n172.905\n345.810\n518.715\n691.620\n864.525\n1037.430\n1210.335\n1383.240\n1556.145\n1729.050\n3/1`;
+    store.loadScaleA(thaiA, "Thai");
+    store.loadScaleB(ed3B, "11 ED3");
+    store.runAutoMap();
+    const { container } = render(() => <PreviewBox store={store} />);
+    const pre = container.querySelector("pre");
+    // B-10's readable line is the last non-empty line (B-degree 10, the highest
+    // mappable). Find the line containing the B-10 label fragment.
+    const text = pre?.textContent ?? "";
+    // The last line corresponds to B-10. Its deviation must be ~-3.0¢, NOT ~-1203.0¢.
+    const lines = text.split("\n").filter((l) => l.trim() !== "");
+    const lastLine = lines[lines.length - 1];
+    expect(lastLine).toMatch(/−3\.0¢/); // unicode minus from fmtSigned
+    expect(lastLine).not.toMatch(/1203/);
+  });
 });
