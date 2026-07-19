@@ -158,4 +158,19 @@ describe("AuditionController", () => {
     // touch the injected synth.
     expect(() => c.dispose()).not.toThrow();
   });
+
+  test("playDot('B', degree) wrapped plays the displaced A-pitch", () => {
+    const { synth, calls } = mockSynth();
+    // Thai Ranat A, 11 ED3 B. Manually connect B-10 → A-3 (wrap will be +1).
+    const thaiA = `! thai.scl\nThai\n7\n!\n161.0\n346.0\n526.0\n686.0\n862.0\n1028.571\n1200.0`;
+    const ed3B = `! 11.scl\n11 ED3\n11\n!\n172.905\n345.810\n518.715\n691.620\n864.525\n1037.430\n1210.335\n1383.240\n1556.145\n1729.050\n3/1`;
+    const store = createStore();
+    store.loadScaleA(thaiA, "Thai");
+    store.loadScaleB(ed3B, "11 ED3");
+    store.connect(10, 3);  // B-10 → A-3
+    const c = createAuditionController(store, { synth });
+    c.playDot("B", 10);
+    // A-3 (526) + 1 oct (1200) = 1726.
+    expect(calls[0].cents).toBeCloseTo(1726, 1);
+  });
 });

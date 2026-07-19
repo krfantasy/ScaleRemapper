@@ -1,6 +1,7 @@
 import { createSignal } from "solid-js";
 import type { Store } from "../state/store";
 import { Synth, type Envelope, type Waveform } from "./synth";
+import { displacedCents } from "../mapping/displacement";
 
 export interface AuditionSettings {
   waveform: Waveform;       // "sine" | "square" | "triangle" | "sawtooth"
@@ -103,12 +104,14 @@ export function createAuditionController(
       synth.playNote(cents, envFromSettings(s), s.waveform);
       return;
     }
-    // ring === "B": remapped A-pitch if mapped, else pure B pitch.
+    // ring === "B": remapped A-pitch (with octave displacement) if mapped,
+    // else pure B pitch.
     const assignment = store.mapping().assignments[degree];
     const aCents = store.aCents();
     const bCents = store.bCents();
+    const periodA = store.periodA();
     const cents = assignment && aCents[assignment.aDegree] !== undefined
-      ? aCents[assignment.aDegree]
+      ? displacedCents(assignment.aDegree, degree, aCents, bCents, periodA)
       : bCents[degree];
     if (cents === undefined) return;
     synth.playNote(cents, envFromSettings(s), s.waveform);
