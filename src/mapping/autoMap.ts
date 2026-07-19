@@ -1,3 +1,4 @@
+import { displacedCents, TIE_EPSILON } from "./displacement";
 import { findTies } from "./deviation";
 import type { Assignment, Mapping, TieResult } from "./types";
 
@@ -14,9 +15,10 @@ export interface AutoMapResult {
  * - A's final degree (the period/octave repeat) is excluded from candidates,
  *   since it is equivalent to the root of the next period.
  * - B's final degree (B's period) is not assigned.
- * - For each (b, k) the optimal octave displacement is closed-form:
- *   n_k = round((bCents[b] - aCents[k]) / periodA). When periodA is 0 (A is
- *   root-only), n_k = 0 and the search reduces to the v2 single-period case.
+ * - For each (b, k) the optimal octave displacement is closed-form via the
+ *   shared displacement helper (single source of truth for the wrap rule).
+ *   When periodA is 0 (A is root-only), n = 0 and the search reduces to the
+ *   v2 single-period case.
  * - Tie-break: on exact equidistance between two (k, n) pairs, pick the one
  *   with the lower sounded cents (aCents[k] + n*periodA). Deterministic.
  *
@@ -34,21 +36,20 @@ export function autoMap(aCents: number[], bCents: number[], periodA: number): Au
     let bestSounded = Infinity;
     let bestDist = Infinity;
     for (let k = 0; k < candidates.length; k++) {
-      const n = periodA === 0 ? 0 : Math.round((target - candidates[k]) / periodA);
-      const sounded = candidates[k] + n * periodA;
+      // Sounded A-pitch at the optimal octave displacement for this (b, k).
+      // displacedCents is the single source of truth — keeps the wrap rule
+      // (including the -0 normalization) consistent with deviation/serializer/etc.
+      const sounded = displacedCents(k, b, aCents, bCents, periodA);
       const dist = Math.abs(sounded - target);
       // Spec §3.2 tie-break: on exact equidistance, pick the candidate with the
-      // LOWER sounded cents. sounded(k) = aCents[k] + round((target-aCents[k])/P)·P
-      // is NOT monotonic in k (n_k varies per k), so we can't rely on iteration
-      // order — compare sounded explicitly. Use a tiny epsilon for the dist
-      // comparison so float noise doesn't defeat the tie detection.
-      const EPSILON = 1e-9;
-      if (dist < bestDist - EPSILON) {
+      // LOWER sounded cents. sounded(k) is NOT monotonic in k (n_k varies per k
+      // and drops at octave boundaries), so we can't rely on iteration order —
+      // compare sounded explicitly. TIE_EPSILON handles float noise.
+      if (dist < bestDist - TIE_EPSILON) {
         bestDist = dist;
         bestDeg = k;
         bestSounded = sounded;
-      } else if (Math.abs(dist - bestDist) < EPSILON && sounded < bestSounded) {
-        // Exact tie on distance — break by lowest sounded cents.
+      } else if (Math.abs(dist - bestDist) < TIE_EPSILON && sounded < bestSounded) {
         bestDeg = k;
         bestSounded = sounded;
       }

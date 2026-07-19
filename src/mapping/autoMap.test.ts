@@ -9,6 +9,12 @@ const EDO19 = [0, 63.158, 126.316, 189.474, 252.632, 315.789, 378.947, 442.105,
 // 12-EDO as Scale B.
 const EDO12 = Array.from({ length: 13 }, (_, i) => i * 100); // [0,100,...,1200]
 
+// Thai Ranat (7 notes + period, octave-closing at 1200¢) and 11 ED3 (11 notes
+// + period 3/1 = 1901.955¢) — the spec's motivating octave-wrap fixture.
+const THAI_A = [0, 161, 346, 526, 686, 862, 1028.571, 1200];
+const ED3_11_B = [0, 172.905, 345.810, 518.715, 691.620, 864.525, 1037.430,
+  1210.335, 1383.240, 1556.145, 1729.050, 1901.955];
+
 describe("autoMap(aCents, bCents, periodA)", () => {
   test("produces one assignment per B-degree (excluding B's period)", () => {
     const { mapping } = autoMap(EDO19, EDO12, 1200);
@@ -77,10 +83,7 @@ describe("autoMap(aCents, bCents, periodA)", () => {
   });
 
   test("octave wrap: Thai Ranat → 11 ED3 finds true nearest across octaves", () => {
-    const A = [0, 161, 346, 526, 686, 862, 1028.571, 1200];
-    const B = [0, 172.905, 345.810, 518.715, 691.620, 864.525, 1037.430,
-      1210.335, 1383.240, 1556.145, 1729.050, 1901.955];
-    const { mapping } = autoMap(A, B, 1200);
+    const { mapping } = autoMap(THAI_A, ED3_11_B, 1200);
     expect(mapping.assignments).toHaveLength(11);
     expect(mapping.assignments[0]?.aDegree).toBe(0);
     expect(mapping.assignments[1]?.aDegree).toBe(1);
@@ -96,15 +99,12 @@ describe("autoMap(aCents, bCents, periodA)", () => {
   });
 
   test("octave wrap: max deviation stays small (< 25¢) for Thai Ranat → 11 ED3", () => {
-    const A = [0, 161, 346, 526, 686, 862, 1028.571, 1200];
-    const B = [0, 172.905, 345.810, 518.715, 691.620, 864.525, 1037.430,
-      1210.335, 1383.240, 1556.145, 1729.050, 1901.955];
-    const { mapping } = autoMap(A, B, 1200);
+    const { mapping } = autoMap(THAI_A, ED3_11_B, 1200);
     let maxDev = 0;
-    for (let b = 0; b < B.length - 1; b++) {
+    for (let b = 0; b < ED3_11_B.length - 1; b++) {
       const a = mapping.assignments[b]!;
-      const n = Math.round((B[b] - A[a.aDegree]) / 1200);
-      const dev = Math.abs(A[a.aDegree] + n * 1200 - B[b]);
+      const n = Math.round((ED3_11_B[b] - THAI_A[a.aDegree]) / 1200);
+      const dev = Math.abs(THAI_A[a.aDegree] + n * 1200 - ED3_11_B[b]);
       if (dev > maxDev) maxDev = dev;
     }
     expect(maxDev).toBeLessThan(25);

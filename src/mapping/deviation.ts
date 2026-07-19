@@ -1,4 +1,4 @@
-import { displacedCents } from "./displacement";
+import { displacedCents, TIE_EPSILON } from "./displacement";
 import type { Collision, Mapping, MappingStats, TieResult } from "./types";
 
 /** Signed deviation for a B-degree: (aCents[aDegree] + n·periodA) − bCents[bDegree],
@@ -58,7 +58,7 @@ export function findTies(
     for (let d = 0; d < aLast; d++) {
       if (d === a.aDegree) continue;   // same-k cross-octave ties are silently dropped
       const altSounded = displacedCents(d, b, aCents, bCents, periodA);
-      if (Math.abs(Math.abs(altSounded - target) - chosenDist) < 1e-9) {
+      if (Math.abs(Math.abs(altSounded - target) - chosenDist) < TIE_EPSILON) {
         alt = d;
         break;
       }

@@ -10,6 +10,11 @@
  * Spec: docs/superpowers/specs/2026-07-20-octave-wrap-design.md §3.1
  */
 
+/** Epsilon for equidistance/tie detection in cents. Shared by autoMap's
+ *  candidate search and findTies' alternative scan so the two callers agree
+ *  on what counts as "exact equidistance" despite float noise. */
+export const TIE_EPSILON = 1e-9;
+
 /** The integer n such that aCents[aDegree] + n·periodA is nearest to
  *  bCents[bDegree]. Returns 0 when periodA is degenerate (A is root-only). */
 export function octaveDisplacement(
