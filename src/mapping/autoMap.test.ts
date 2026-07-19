@@ -114,6 +114,22 @@ describe("autoMap(aCents, bCents, periodA)", () => {
     const { mapping } = autoMap([0], EDO12, 0);
     expect(mapping.assignments.every((a) => a?.aDegree === 0)).toBe(true);
   });
+
+  test("tie-break: on exact equidistance, picks the candidate with the LOWER sounded cents (not the lower k)", () => {
+    // Constructed so that two A-degrees are exactly equidistant from a B-degree,
+    // AND the lower-sounded candidate sits at the HIGHER k. The v2 (pre-fix)
+    // tie-break used strict <, which would pick the lower-k candidate by
+    // iteration order; the spec §3.2 mandates lowest sounded cents.
+    //
+    // aCents = [0, 800, 400, 1200] (deliberately non-monotonic; periodA = 1200).
+    // B-degree 1 at 600¢: A-1+0oct = 800 (dist 200); A-2+0oct = 400 (dist 200).
+    // Exact tie. A-2 (400¢) has lower sounded cents than A-1 (800¢), so per
+    // spec B-1 must map to A-2.
+    const aCents = [0, 800, 400, 1200];
+    const bCents = [0, 600, 1200];
+    const { mapping } = autoMap(aCents, bCents, 1200);
+    expect(mapping.assignments[1]?.aDegree).toBe(2);
+  });
 });
 
 describe("randomMap(aCents, bCents)", () => {

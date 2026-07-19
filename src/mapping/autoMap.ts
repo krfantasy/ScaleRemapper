@@ -31,17 +31,24 @@ export function autoMap(aCents: number[], bCents: number[], periodA: number): Au
   for (let b = 0; b < bLast; b++) {
     const target = bCents[b];
     let bestDeg = 0;
-    let bestSounded = 0;
+    let bestSounded = Infinity;
     let bestDist = Infinity;
     for (let k = 0; k < candidates.length; k++) {
       const n = periodA === 0 ? 0 : Math.round((target - candidates[k]) / periodA);
       const sounded = candidates[k] + n * periodA;
       const dist = Math.abs(sounded - target);
-      // Strict < so that on exact ties the FIRST (lower sounded) wins. Since
-      // candidates are in ascending cents order and n is monotonic in target,
-      // lower-sounded candidates are encountered first.
-      if (dist < bestDist) {
+      // Spec §3.2 tie-break: on exact equidistance, pick the candidate with the
+      // LOWER sounded cents. sounded(k) = aCents[k] + round((target-aCents[k])/P)·P
+      // is NOT monotonic in k (n_k varies per k), so we can't rely on iteration
+      // order — compare sounded explicitly. Use a tiny epsilon for the dist
+      // comparison so float noise doesn't defeat the tie detection.
+      const EPSILON = 1e-9;
+      if (dist < bestDist - EPSILON) {
         bestDist = dist;
+        bestDeg = k;
+        bestSounded = sounded;
+      } else if (Math.abs(dist - bestDist) < EPSILON && sounded < bestSounded) {
+        // Exact tie on distance — break by lowest sounded cents.
         bestDeg = k;
         bestSounded = sounded;
       }
