@@ -46,7 +46,14 @@ const App: Component = () => {
     const b = store.scaleB();
     if (!a) return;
     if (store.stats().mappedCount !== store.bCents().length - 1) return;
-    const sclText = serializeMappingToScl(store.mapping(), store.aCents(), b, a.name);
+    const sclText = serializeMappingToScl(
+      store.mapping(),
+      store.aCents(),
+      store.bCents(),
+      store.periodA(),
+      b,
+      a.name,
+    );
     const blob = new Blob([sclText], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");

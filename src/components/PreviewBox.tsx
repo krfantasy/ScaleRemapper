@@ -38,7 +38,14 @@ export const PreviewBox: Component<Props> = (props) => {
     if (props.store.stats().mappedCount !== props.store.bCents().length - 1) {
       return "Not all B-degrees mapped.";
     }
-    return serializeMappingToScl(props.store.mapping(), props.store.aCents(), props.store.scaleB(), a.name);
+    return serializeMappingToScl(
+      props.store.mapping(),
+      props.store.aCents(),
+      props.store.bCents(),
+      props.store.periodA(),
+      props.store.scaleB(),
+      a.name,
+    );
   });
 
   // Label for a B-degree: note name when B is the default, else "degree·cents".

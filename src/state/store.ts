@@ -34,7 +34,7 @@ export function createStore() {
     const a = aCents();
     return a.length > 0 ? a[a.length - 1] : 0;
   });
-  const stats = createMemo(() => computeStats(mapping(), aCents(), bCents()));
+  const stats = createMemo(() => computeStats(mapping(), aCents(), bCents(), periodA()));
 
   function resetMapping(): void {
     setMapping(emptyMapping(bMappable()));
