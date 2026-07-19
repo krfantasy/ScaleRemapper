@@ -5,7 +5,6 @@ import { computeStats } from "../mapping/deviation";
 import { edoScale } from "../scl/edo";
 import type { Mapping, Assignment } from "../mapping/types";
 import type { LoadedScale } from "../scl/types";
-import type { Waveform } from "../audio/synth";
 
 type Selection = { ring: "A" | "B"; degree: number } | null;
 
@@ -24,7 +23,6 @@ export function createStore() {
   const bMappable = () => Math.max(0, scaleB().scale.degrees.length - 1);
   const [mapping, setMapping] = createSignal<Mapping>(emptyMapping(bMappable()));
   const [selected, setSelected] = createSignal<Selection>(null);
-  const [waveform, setWaveform] = createSignal<Waveform>("sine");
 
   const aCents = createMemo<number[]>(() =>
     scaleA() ? scaleA()!.scale.degrees.map((d) => d.cents) : [],
@@ -112,7 +110,6 @@ export function createStore() {
     scaleB,
     mapping,
     selected,
-    waveform,
     aCents,
     bCents,
     stats,
@@ -127,7 +124,6 @@ export function createStore() {
     clearMapping,
     select,
     clearSelection,
-    setWaveform,
   };
 }
 
