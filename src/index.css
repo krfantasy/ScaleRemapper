@@ -184,6 +184,10 @@ body {
   line-height: 1.65;
   white-space: pre;
   overflow: auto;
+  /* Fill the resizable .preview-box column: take all remaining vertical space
+     below the header, and don't let the content's intrinsic height shrink it. */
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 /* Legend */
