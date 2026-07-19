@@ -21,6 +21,19 @@ function mockSynth() {
   };
 }
 
+// Minimal AudioContext stub for the dispose() test — jsdom has no AudioContext.
+function fakeAudioContext() {
+  return {
+    state: "suspended",
+    close: vi.fn(async () => {}),
+    resume: vi.fn(async () => {}),
+    createOscillator: vi.fn(),
+    createGain: vi.fn(),
+    destination: {},
+    currentTime: 0,
+  } as unknown as AudioContext;
+}
+
 describe("AuditionController", () => {
   test("enabled defaults to false", () => {
     const { synth } = mockSynth();
@@ -122,5 +135,27 @@ describe("AuditionController", () => {
     const c = createAuditionController(createStore(), { synth });
     c.updateSettings({ waveform: "square" });
     expect(synth.setWaveform).toHaveBeenCalledWith("square");
+  });
+
+  test("dispose() closes the AudioContext when the controller owns it", () => {
+    const ctx = fakeAudioContext();
+    const origCtor = (window as any).AudioContext;
+    // Must be a real constructor — the controller calls `new (window.AudioContext)()`.
+    (window as any).AudioContext = function AudioContextStub() { return ctx; };
+    try {
+      const c = createAuditionController(createStore());
+      c.dispose();
+      expect(ctx.close).toHaveBeenCalled();
+    } finally {
+      (window as any).AudioContext = origCtor;
+    }
+  });
+
+  test("dispose() is a no-op when a synth was injected", () => {
+    const { synth } = mockSynth();
+    const c = createAuditionController(createStore(), { synth });
+    // No AudioContext was constructed, so dispose must not throw and must not
+    // touch the injected synth.
+    expect(() => c.dispose()).not.toThrow();
   });
 });

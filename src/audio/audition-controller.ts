@@ -42,6 +42,8 @@ export interface AuditionController {
   playDot(ring: "A" | "B", degree: number): void;
   /** Resume the AudioContext after a user gesture. */
   resume(): Promise<void>;
+  /** Close the AudioContext if the controller owns it. No-op for an injected synth. */
+  dispose(): void;
 }
 
 export interface AuditionControllerDeps {
@@ -56,9 +58,14 @@ export function createAuditionController(
   const [enabled, setEnabled] = createSignal(false);
   const [settings, setSettings] = createSignal<AuditionSettings>({ ...DEFAULT_AUDITION_SETTINGS });
 
-  const synth: Synth =
-    deps.synth ??
-    new Synth(new (window.AudioContext || (window as any).webkitAudioContext)());
+  // If we construct the Synth ourselves, we also own its AudioContext and must
+  // close it on dispose(). An injected synth (tests, or a future caller that
+  // manages lifetime itself) is left alone.
+  let ownedCtx: AudioContext | null = null;
+  const synth: Synth = deps.synth ?? (() => {
+    ownedCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    return new Synth(ownedCtx);
+  })();
 
   function updateSettings(patch: Partial<AuditionSettings>): void {
     setSettings((prev) => {
@@ -110,5 +117,11 @@ export function createAuditionController(
     updateSettings,
     playDot,
     resume: () => synth.resume(),
+    dispose: () => {
+      if (ownedCtx) {
+        void ownedCtx.close();
+        ownedCtx = null;
+      }
+    },
   };
 }
