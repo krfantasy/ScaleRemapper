@@ -1,21 +1,40 @@
-import { describe, test, expect } from "vitest";
-import { render } from "@solidjs/testing-library";
+import { describe, test, expect, vi } from "vitest";
+import { render, fireEvent } from "@solidjs/testing-library";
 import { CircleViz } from "./CircleViz";
 import { createStore } from "../state/store";
+import type { AuditionController } from "../audio/audition-controller";
 
 const EDO12_A = `! a.scl\nA\n12\n${Array.from({ length: 11 }, (_, i) => `${(i + 1) * 100}.0.`).join("\n")}\n2/1`;
+
+// Minimal audition stub for tests. Tests that don't care about audition pass
+// this OFF stub; the interaction tests override `enabled`/`playDot`.
+function stubAudition(overrides: Partial<AuditionController> = {}): AuditionController {
+  return {
+    enabled: () => false,
+    settings: () => ({
+      waveform: "sine", attackMs: 10, decayMs: 100,
+      sustainLevel: 0.7, releaseMs: 200, holdMs: 500,
+    }),
+    setEnabled: () => {},
+    updateSettings: () => {},
+    playDot: () => {},
+    resume: async () => {},
+    dispose: () => {},
+    ...overrides,
+  } as AuditionController;
+}
 
 describe("CircleViz", () => {
   test("shows placeholder when no source loaded", () => {
     const store = createStore();
-    const { getByText } = render(() => <CircleViz store={store} />);
+    const { getByText } = render(() => <CircleViz store={store} audition={stubAudition()} />);
     expect(getByText(/load a scale to begin/i)).toBeInTheDocument();
   });
 
   test("renders one outer dot per A-degree (minus A's period)", () => {
     const store = createStore();
     store.loadScaleA(EDO12_A, "A");
-    const { container } = render(() => <CircleViz store={store} />);
+    const { container } = render(() => <CircleViz store={store} audition={stubAudition()} />);
     const outerDots = container.querySelectorAll('[data-ring="outer"]');
     // A has 13 degrees; the period (last) is skipped → 12 outer dots.
     expect(outerDots.length).toBe(12);
@@ -24,7 +43,7 @@ describe("CircleViz", () => {
   test("renders one inner dot per B-degree (minus B's period)", () => {
     const store = createStore();
     store.loadScaleA(EDO12_A, "A");
-    const { container } = render(() => <CircleViz store={store} />);
+    const { container } = render(() => <CircleViz store={store} audition={stubAudition()} />);
     const innerDots = container.querySelectorAll('[data-ring="inner"]');
     // default B = 12-EDO, 13 degrees, period skipped → 12 inner dots.
     expect(innerDots.length).toBe(12);
@@ -33,7 +52,7 @@ describe("CircleViz", () => {
   test("inner dots show note-name labels when B is the 12-EDO default", () => {
     const store = createStore();
     store.loadScaleA(EDO12_A, "A");
-    const { container } = render(() => <CircleViz store={store} />);
+    const { container } = render(() => <CircleViz store={store} audition={stubAudition()} />);
     const labels = Array.from(container.querySelectorAll("g > text")).map((n) => n.textContent);
     expect(labels).toContain("C");
     expect(labels).toContain("B");
@@ -43,7 +62,7 @@ describe("CircleViz", () => {
     const store = createStore();
     store.loadScaleA(EDO12_A, "A");
     store.setBFromPreset(19); // origin 'preset', not 'default'
-    const { container } = render(() => <CircleViz store={store} />);
+    const { container } = render(() => <CircleViz store={store} audition={stubAudition()} />);
     const labels = Array.from(container.querySelectorAll("g > text")).map((n) => n.textContent);
     // Cents are intentionally NOT rendered on the circle (kept in the hover
     // tooltip only). Each in-dot label is just the degree index.
@@ -58,7 +77,7 @@ describe("CircleViz", () => {
   test("renders B-degree gridlines (count = B mappable degree count)", () => {
     const store = createStore();
     store.loadScaleA(EDO12_A, "A");
-    const { container } = render(() => <CircleViz store={store} />);
+    const { container } = render(() => <CircleViz store={store} audition={stubAudition()} />);
     const gridlines = container.querySelectorAll('line[data-role="gridline"]');
     // default B = 12-EDO → 12 gridlines.
     expect(gridlines.length).toBe(12);
@@ -70,10 +89,50 @@ describe("CircleViz", () => {
     const sparseA = `! a.scl\nA\n3\n200.0.\n400.0.\n2/1`;
     store.loadScaleA(sparseA, "A");
     store.runAutoMap(); // multiple B-degrees will collapse onto sparse A-degrees
-    const { container } = render(() => <CircleViz store={store} />);
+    const { container } = render(() => <CircleViz store={store} audition={stubAudition()} />);
     const badges = container.querySelectorAll('[data-role="collapse-badge"]');
     expect(badges.length).toBeGreaterThan(0);
     const firstBadge = badges[0].textContent ?? "";
     expect(firstBadge).toMatch(/×\d+/);
+  });
+
+  test("audition ON: tapping an inner dot calls playDot('B', degree) and does not select", () => {
+    const store = createStore();
+    store.loadScaleA(EDO12_A, "A");
+    const playDot = vi.fn();
+    const audition = stubAudition({ enabled: () => true, playDot });
+    const { container } = render(() => <CircleViz store={store} audition={audition} />);
+    const innerDot = container.querySelector('[data-ring="inner"][data-bdegree="3"]') as Element;
+    fireEvent.pointerDown(innerDot, { clientX: 0, clientY: 0 });
+    window.dispatchEvent(new PointerEvent("pointerup", { clientX: 0, clientY: 0 }));
+    expect(playDot).toHaveBeenCalledWith("B", 3);
+    expect(store.selected()).toBeNull();
+  });
+
+  test("audition ON: tapping an outer dot calls playDot('A', degree)", () => {
+    const store = createStore();
+    store.loadScaleA(EDO12_A, "A");
+    const playDot = vi.fn();
+    const audition = stubAudition({ enabled: () => true, playDot });
+    const { container } = render(() => <CircleViz store={store} audition={audition} />);
+    const outerDot = container.querySelector('[data-ring="outer"][data-degree="4"]') as Element;
+    fireEvent.pointerDown(outerDot, { clientX: 0, clientY: 0 });
+    window.dispatchEvent(new PointerEvent("pointerup", { clientX: 0, clientY: 0 }));
+    expect(playDot).toHaveBeenCalledWith("A", 4);
+  });
+
+  test("audition ON: drag beyond threshold + drop does NOT connect", () => {
+    const store = createStore();
+    store.loadScaleA(EDO12_A, "A");
+    const playDot = vi.fn();
+    const audition = stubAudition({ enabled: () => true, playDot });
+    const { container } = render(() => <CircleViz store={store} audition={audition} />);
+    const innerDot = container.querySelector('[data-ring="inner"][data-bdegree="3"]') as Element;
+    fireEvent.pointerDown(innerDot, { clientX: 100, clientY: 100 });
+    window.dispatchEvent(new PointerEvent("pointermove", { clientX: 500, clientY: 500 }));
+    window.dispatchEvent(new PointerEvent("pointerup", { clientX: 500, clientY: 500 }));
+    // No assignment written, no selection made, no playDot on a drag.
+    expect(store.mapping().assignments[3]).toBeNull();
+    expect(store.selected()).toBeNull();
   });
 });

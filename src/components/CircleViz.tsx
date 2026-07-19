@@ -1,9 +1,10 @@
 import { For, Show, createSignal, createMemo, createEffect, onMount, onCleanup, type Component } from "solid-js";
 import type { Store } from "../state/store";
+import type { AuditionController } from "../audio/audition-controller";
 import { noteName } from "../scl/edo";
 import { findCollisions } from "../mapping/deviation";
 
-interface Props { store: Store; }
+interface Props { store: Store; audition: AuditionController; }
 
 const CX = 200, CY = 200, R_OUTER = 180, R_INNER = 120;
 const TAU = Math.PI * 2;
@@ -151,6 +152,7 @@ export const CircleViz: Component<Props> = (props) => {
     const onMove = (e: PointerEvent) => {
       const d = drag();
       if (!d) return;
+      if (props.audition.enabled()) return;  // no rubber-band, no drop-target while ON
       const p = toSvg(e);
       if (!p) return;
       setCursor(p);
@@ -180,6 +182,14 @@ export const CircleViz: Component<Props> = (props) => {
       const d = drag();
       if (!d) return;
       const moved = Math.hypot(downAt.x - e.clientX, downAt.y - e.clientY);
+      if (props.audition.enabled()) {
+        if (moved <= 4) {
+          void props.audition.resume();
+          props.audition.playDot(d.ring === "outer" ? "A" : "B", d.ring === "outer" ? (d as any).aDegree : (d as any).bDegree);
+        }
+        setDrag(null); setCursor(null); setDropTarget(null);
+        return;  // no select, no connect while ON
+      }
       const t = dropTarget();
       if (t) {
         if (d.ring === "outer") props.store.connect(t.ring === "inner" ? t.bDegree : -1, d.aDegree);

@@ -62,7 +62,7 @@ const App: Component = () => {
       <div class={styles.main}>
         <div class={styles.circleArea}>
           <div class={styles.circleStage}>
-            <CircleViz store={store} />
+            <CircleViz store={store} audition={audition} />
           </div>
           <Legend />
         </div>
