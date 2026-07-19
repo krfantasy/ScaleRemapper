@@ -39,15 +39,20 @@ describe("CircleViz", () => {
     expect(labels).toContain("B");
   });
 
-  test("inner dots show degree·cents labels when B is a non-default preset", () => {
+  test("inner dots show only short degree indices (no cents) when B is a non-default preset", () => {
     const store = createStore();
     store.loadScaleA(EDO12_A, "A");
     store.setBFromPreset(19); // origin 'preset', not 'default'
     const { container } = render(() => <CircleViz store={store} />);
     const labels = Array.from(container.querySelectorAll("g > text")).map((n) => n.textContent);
-    // No "C" note names; instead degree·cents labels.
-    expect(labels.some((t) => t?.includes("·"))).toBe(true);
+    // Cents are intentionally NOT rendered on the circle (kept in the hover
+    // tooltip only). Each in-dot label is just the degree index.
+    expect(labels.every((t) => !t.includes("·"))).toBe(true);
+    expect(labels.every((t) => !t.includes("¢"))).toBe(true);
     expect(labels).not.toContain("C");
+    // Degree indices 0..18 should all be present as short numeric strings.
+    expect(labels).toContain("0");
+    expect(labels).toContain("18");
   });
 
   test("renders B-degree gridlines (count = B mappable degree count)", () => {

@@ -71,12 +71,48 @@ body {
   cursor: pointer;
 }
 
+/* Drag handles for resizing the three main regions. */
+.splitter {
+  flex-shrink: 0;
+  background: #e0e0e0;
+  position: relative;
+  z-index: 5;
+  transition: background 0.1s;
+}
+.splitter:hover {
+  background: #c0c0c0;
+}
+.splitter-vertical {
+  width: 6px;
+  cursor: col-resize;
+}
+.splitter-horizontal {
+  height: 6px;
+  cursor: row-resize;
+}
+
+/* Sizing wrappers driven by the resizable-panel signals in App.tsx.
+   Width/height come from inline style; these rules hold the non-shrinking
+   flex base and clipping so the inner component fills the wrapper. */
+.side-panel-wrap {
+  flex-shrink: 0;
+  height: 100%;
+}
+.preview-box-wrap {
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+
 /* SidePanel */
 .side-panel {
-  width: 250px;
+  /* Width is controlled by the resizable .side-panel-wrap in App.tsx; the panel
+     fills its wrapper. Kept height: 100% so it stretches the full row height. */
+  height: 100%;
   border-left: 1px solid #e0e0e0;
   padding: 1rem;
   background: #fff;
+  overflow: auto;
 }
 
 .side-panel .label {
@@ -98,9 +134,15 @@ body {
 
 /* PreviewBox */
 .preview-box {
+  /* Height is controlled by the resizable .preview-box-wrap in App.tsx; this
+     element fills the wrapper. The inner <pre> already has overflow:auto. */
+  height: 100%;
+  box-sizing: border-box;
   border-top: 1px solid #e0e0e0;
   background: #f8f8f8;
   padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
 }
 
 .preview-header {
