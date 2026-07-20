@@ -5,6 +5,7 @@ import { EDO_PRESETS } from "../scl/edo";
 interface Props {
   store: Store;
   onSave: () => void;
+  onHelpClick?: () => void;
 }
 
 export const TopBar: Component<Props> = (props) => {
@@ -61,6 +62,7 @@ export const TopBar: Component<Props> = (props) => {
         <button disabled={props.store.scaleA() === null} onClick={() => props.store.runRandomMap()}>🎲 Random-Map</button>
         <button onClick={() => props.store.clearMapping()}>✕ Clear</button>
         <button disabled={!canSave()} onClick={() => props.onSave()}>💾 Save .scl</button>
+        <button onClick={() => props.onHelpClick?.()}>❓ Help</button>
       </div>
     </div>
   );

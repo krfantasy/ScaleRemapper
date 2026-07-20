@@ -340,7 +340,7 @@ export const CircleViz: Component<Props> = (props) => {
                         onMouseOut={() => setHovered(null)}
                       />
                       <Show when={collapseN() >= 2}>
-                        <text data-role="collapse-badge" x={cx + 7} y={cy - 7}
+                        <text data-role="collapse-badge" x={cx + 7} y={cy + 7}
                           font-size="8" font-weight="bold" fill="#f59e0b" pointer-events="none">
                           ×{collapseN()}
                         </text>

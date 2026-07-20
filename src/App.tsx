@@ -1,10 +1,11 @@
-import { createSignal, onCleanup, type Component } from "solid-js";
+import { createSignal, onCleanup, Show, type Component } from "solid-js";
 import { createStore } from "./state/store";
 import { createAuditionController } from "./audio/audition-controller";
 import { TopBar } from "./components/TopBar";
 import { CircleViz } from "./components/CircleViz";
 import { SidePanel } from "./components/SidePanel";
 import { PreviewBox } from "./components/PreviewBox";
+import { HelpWidget } from "./components/HelpWidget";
 import { Legend } from "./components/Legend";
 import { Splitter } from "./components/Splitter";
 import { serializeMappingToScl } from "./scl/serializer";
@@ -20,7 +21,9 @@ const App: Component = () => {
   // User-controlled panel sizes. Defaults match the previous fixed layout
   // (250px side panel; ~160px preview strip). Clamped on drag.
   const [sidePanelWidth, setSidePanelWidth] = createSignal(250);
-  const [previewHeight, setPreviewHeight] = createSignal(160);
+  const [previewHeight, setPreviewHeight] = createSignal(200);
+  // Help modal open/close — always starts closed (no persistence).
+  const [helpOpen, setHelpOpen] = createSignal(false);
 
   // Vertical splitter (between CircleViz and SidePanel): dragging the boundary
   // LEFT shrinks the side panel, RIGHT grows it. Standard splitter convention —
@@ -65,7 +68,7 @@ const App: Component = () => {
 
   return (
     <div class={styles.app}>
-      <TopBar store={store} onSave={handleSave} />
+      <TopBar store={store} onSave={handleSave} onHelpClick={() => setHelpOpen(true)} />
       <div class={styles.main}>
         <div class={styles.circleArea}>
           <div class={styles.circleStage}>
@@ -82,6 +85,9 @@ const App: Component = () => {
       <div class="preview-box-wrap" style={{ height: `${previewHeight()}px` }}>
         <PreviewBox store={store} />
       </div>
+      <Show when={helpOpen()}>
+        <HelpWidget onClose={() => setHelpOpen(false)} />
+      </Show>
     </div>
   );
 };
