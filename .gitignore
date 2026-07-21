@@ -17,9 +17,11 @@ dist-ssr
 
 # Tooling
 .superpowers/
-/docs/superpowers/
 
 # Editor directories and files
+*~
+\#*\#
+.\#*
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -33,4 +35,8 @@ test-fixtures/
 .playwright-mcp/
 *.png
 .zcode/
-*.scl~
+*.scl
+
+# Docs
+TODO.org
+/docs/superpowers/
