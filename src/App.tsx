@@ -1,4 +1,4 @@
-import { createSignal, onCleanup, Show, type Component } from "solid-js";
+import { createSignal, onCleanup, Show, ErrorBoundary, type Component } from "solid-js";
 import { createStore } from "./state/store";
 import { createAuditionController } from "./audio/audition-controller";
 import { TopBar } from "./components/TopBar";
@@ -6,6 +6,7 @@ import { CircleViz } from "./components/CircleViz";
 import { SidePanel } from "./components/SidePanel";
 import { PreviewBox } from "./components/PreviewBox";
 import { HelpWidget } from "./components/HelpWidget";
+import { LoadErrorBanner } from "./components/LoadErrorBanner";
 import { Legend } from "./components/Legend";
 import { Splitter } from "./components/Splitter";
 import { serializeMappingToScl } from "./scl/serializer";
@@ -67,28 +68,41 @@ const App: Component = () => {
   }
 
   return (
-    <div class={styles.app}>
-      <TopBar store={store} onSave={handleSave} onHelpClick={() => setHelpOpen(true)} />
-      <div class={styles.main}>
-        <div class={styles.circleArea}>
-          <div class={styles.circleStage}>
-            <CircleViz store={store} audition={audition} />
+    <ErrorBoundary
+      fallback={() => (
+        <div class="app-error">
+          <h2>⚠ Something went wrong</h2>
+          <p>An unexpected error occurred while rendering.</p>
+          <p>Please <a href=".">reload the page</a> to continue.</p>
+        </div>
+      )}
+    >
+      <div class={styles.app}>
+        <TopBar store={store} onSave={handleSave} onHelpClick={() => setHelpOpen(true)} />
+        <Show when={store.loadError()}>
+          {(err) => <LoadErrorBanner error={err()} onClose={() => store.clearLoadError()} />}
+        </Show>
+        <div class={styles.main}>
+          <div class={styles.circleArea}>
+            <div class={styles.circleStage}>
+              <CircleViz store={store} audition={audition} />
+            </div>
+            <Legend />
           </div>
-          <Legend />
+          <Splitter orientation="vertical" onDrag={onSidePanelDrag} />
+          <div class="side-panel-wrap" style={{ width: `${sidePanelWidth()}px` }}>
+            <SidePanel store={store} audition={audition} />
+          </div>
         </div>
-        <Splitter orientation="vertical" onDrag={onSidePanelDrag} />
-        <div class="side-panel-wrap" style={{ width: `${sidePanelWidth()}px` }}>
-          <SidePanel store={store} audition={audition} />
+        <Splitter orientation="horizontal" onDrag={onPreviewDrag} />
+        <div class="preview-box-wrap" style={{ height: `${previewHeight()}px` }}>
+          <PreviewBox store={store} />
         </div>
+        <Show when={helpOpen()}>
+          <HelpWidget onClose={() => setHelpOpen(false)} />
+        </Show>
       </div>
-      <Splitter orientation="horizontal" onDrag={onPreviewDrag} />
-      <div class="preview-box-wrap" style={{ height: `${previewHeight()}px` }}>
-        <PreviewBox store={store} />
-      </div>
-      <Show when={helpOpen()}>
-        <HelpWidget onClose={() => setHelpOpen(false)} />
-      </Show>
-    </div>
+    </ErrorBoundary>
   );
 };
 

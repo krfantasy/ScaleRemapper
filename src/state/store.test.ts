@@ -190,3 +190,79 @@ describe("store — periodA memo", () => {
     expect(s.periodA()).toBe(1200);
   });
 });
+
+describe("store — load error handling", () => {
+  test("loadScaleA is null initially", () => {
+    expect(createStore().loadError()).toBeNull();
+  });
+
+  test("loadScaleA with malformed input sets loadError (source A) and does not throw", () => {
+    const s = createStore();
+    // "bad\n0\n" — description then count 0, but the real trigger here is the
+    // too-few-meaningful-lines guard; any malformed body works. We assert it
+    // does NOT throw and records a structured error.
+    expect(() => s.loadScaleA("garbage", "bad.scl")).not.toThrow();
+    const err = s.loadError();
+    expect(err).not.toBeNull();
+    expect(err!.source).toBe("A");
+    expect(err!.filename).toBe("bad.scl");
+    expect(typeof err!.message).toBe("string");
+    expect(err!.message.length).toBeGreaterThan(0);
+  });
+
+  test("a failed loadScaleA leaves scaleA at its prior value (null if first load)", () => {
+    const s = createStore();
+    s.loadScaleA("garbage", "bad.scl");
+    expect(s.scaleA()).toBeNull();
+  });
+
+  test("a failed loadScaleA after a successful one keeps the prior valid scale", () => {
+    const s = createStore();
+    s.loadScaleA(EDO12_A, "Good A");
+    expect(s.scaleA()?.name).toBe("Good A");
+    s.loadScaleA("garbage", "bad.scl");
+    // Prior valid scale is retained; only loadError is set.
+    expect(s.scaleA()?.name).toBe("Good A");
+    expect(s.loadError()?.filename).toBe("bad.scl");
+  });
+
+  test("a successful loadScaleA clears a prior loadError", () => {
+    const s = createStore();
+    s.loadScaleA("garbage", "bad.scl");
+    expect(s.loadError()).not.toBeNull();
+    s.loadScaleA(EDO12_A, "Good A");
+    expect(s.loadError()).toBeNull();
+    expect(s.scaleA()?.name).toBe("Good A");
+  });
+
+  test("loadScaleB with malformed input sets loadError (source B) and leaves scaleB intact", () => {
+    const s = createStore();
+    // scaleB defaults to 12-EDO; a failed load must keep it.
+    expect(s.scaleB().name).toBe("12-EDO");
+    expect(() => s.loadScaleB("garbage", "bad-b.scl")).not.toThrow();
+    expect(s.scaleB().name).toBe("12-EDO");
+    const err = s.loadError();
+    expect(err).not.toBeNull();
+    expect(err!.source).toBe("B");
+    expect(err!.filename).toBe("bad-b.scl");
+  });
+
+  test("clearLoadError nulls the error without touching scales", () => {
+    const s = createStore();
+    s.loadScaleA(EDO12_A, "A");
+    s.loadScaleA("garbage", "bad.scl");
+    expect(s.loadError()).not.toBeNull();
+    s.clearLoadError();
+    expect(s.loadError()).toBeNull();
+    // The valid A loaded first is still there.
+    expect(s.scaleA()?.name).toBe("A");
+  });
+
+  test("a failed B load then a successful A load clears the error (success resets it)", () => {
+    const s = createStore();
+    s.loadScaleB("garbage", "bad-b.scl");
+    expect(s.loadError()?.source).toBe("B");
+    s.loadScaleA(EDO12_A, "A");
+    expect(s.loadError()).toBeNull();
+  });
+});
