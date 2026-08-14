@@ -265,4 +265,18 @@ describe("store — load error handling", () => {
     s.loadScaleA(EDO12_A, "A");
     expect(s.loadError()).toBeNull();
   });
+
+  test("reportLoadError sets a structured error from a non-parse failure (e.g. File.text I/O rejection)", () => {
+    const s = createStore();
+    s.reportLoadError("A", "a.scl", new Error("read failed"));
+    const err = s.loadError();
+    expect(err).not.toBeNull();
+    expect(err!.source).toBe("A");
+    expect(err!.filename).toBe("a.scl");
+    expect(err!.message).toBe("read failed");
+    // Non-Error payloads fall back to String() like the parse-error path.
+    s.reportLoadError("B", "b.scl", 42);
+    expect(s.loadError()!.source).toBe("B");
+    expect(s.loadError()!.message).toBe("42");
+  });
 });

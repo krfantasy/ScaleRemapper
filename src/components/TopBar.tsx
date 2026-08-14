@@ -16,14 +16,16 @@ export const TopBar: Component<Props> = (props) => {
     const input = e.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
-    file.text().then((text) => props.store.loadScaleA(text, file.name.replace(/\.scl$/i, "")));
+    const name = file.name.replace(/\.scl$/i, "");
+    file.text().then((text) => props.store.loadScaleA(text, name)).catch((err) => props.store.reportLoadError("A", name, err));
     input.value = "";
   };
   const handleBFile = (e: Event) => {
     const input = e.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
-    file.text().then((text) => props.store.loadScaleB(text, file.name.replace(/\.scl$/i, "")));
+    const name = file.name.replace(/\.scl$/i, "");
+    file.text().then((text) => props.store.loadScaleB(text, name)).catch((err) => props.store.reportLoadError("B", name, err));
     input.value = "";
   };
 

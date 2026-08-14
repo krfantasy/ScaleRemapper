@@ -84,6 +84,11 @@ export function createStore() {
     setLoadError(null);
   }
 
+  /** Surface a load failure raised outside parseScl (e.g. a File.text() I/O rejection). */
+  function reportLoadError(source: "A" | "B", filename: string, message: unknown): void {
+    setLoadError({ source, filename, message: errMsg(message) });
+  }
+
   function setBFromPreset(edo: number): void {
     setScaleB(edoScale(edo));
     resetMapping();
@@ -164,6 +169,7 @@ export function createStore() {
     select,
     clearSelection,
     clearLoadError,
+    reportLoadError,
   };
 }
 
