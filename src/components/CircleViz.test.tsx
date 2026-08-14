@@ -141,6 +141,25 @@ describe("CircleViz", () => {
     // manual Playwright testing (plan §7.3).
   });
 
+  test("selecting a B dot clears the previously selected A-dot highlight", () => {
+    const store = createStore();
+    store.loadScaleA(EDO12_A, "A");
+    const { container } = render(() => <CircleViz store={store} audition={stubAudition()} />);
+    const outerDot = container.querySelector('[data-ring="outer"][data-degree="3"]') as Element;
+    // Select A-3: local A-highlight applies the selected styling (r=6).
+    fireEvent.pointerDown(outerDot, { clientX: 0, clientY: 0 });
+    window.dispatchEvent(new PointerEvent("pointerup", { clientX: 0, clientY: 0 }));
+    expect(store.selected()).toEqual({ ring: "A", degree: 3 });
+    expect(outerDot.getAttribute("r")).toBe("6");
+    // Then select B-4: the store selection moves to ring B, so the stale
+    // A-highlight must clear (unmapped A-3 drops back to r=3.5).
+    const innerDot = container.querySelector('[data-ring="inner"][data-bdegree="4"]') as Element;
+    fireEvent.pointerDown(innerDot, { clientX: 0, clientY: 0 });
+    window.dispatchEvent(new PointerEvent("pointerup", { clientX: 0, clientY: 0 }));
+    expect(store.selected()).toEqual({ ring: "B", degree: 4 });
+    expect(outerDot.getAttribute("r")).toBe("3.5");
+  });
+
   test("octave-wrapped assignment renders a connector and an octave label", () => {
     const store = createStore();
     // Thai Ranat A (period 1200¢), hand-rolled non-octave B extending past 1200¢.

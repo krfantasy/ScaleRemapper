@@ -57,11 +57,10 @@ export const CircleViz: Component<Props> = (props) => {
   const [selectedADegree, setSelectedADegree] = createSignal<number | null>(null);
 
   // Keep local A-selection in sync with the store: when the store's selection
-  // clears (which happens on every scale load via resetMapping), clear the local
-  // A-highlight too, so a stale index doesn't falsely highlight a dot on the new
-  // scale A ring.
+  // moves away from A (cleared, or moved to a B-degree), clear the local
+  // A-highlight so a stale index doesn't falsely highlight a dot on ring A.
   createEffect(() => {
-    if (props.store.selected() === null) setSelectedADegree(null);
+    if (props.store.selected()?.ring !== "A") setSelectedADegree(null);
   });
 
   type Pt = { x: number; y: number };
