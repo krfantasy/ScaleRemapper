@@ -20,6 +20,10 @@ export const Splitter: Component<Props> = (props) => {
 
   const onDown = (e: PointerEvent) => {
     e.preventDefault();
+    // Capture the pointer so pointerup is delivered even when released outside
+    // the window — otherwise the listeners below leak and the cursor sticks.
+    // `?.` guard: jsdom doesn't implement setPointerCapture.
+    (e.currentTarget as HTMLElement | null)?.setPointerCapture?.(e.pointerId);
     lastPos = e[axis()];
     const onMove = (ev: PointerEvent) => {
       const cur = ev[axis()];
@@ -29,11 +33,13 @@ export const Splitter: Component<Props> = (props) => {
     const onUp = () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
     document.body.style.cursor = props.orientation === "vertical" ? "col-resize" : "row-resize";
     document.body.style.userSelect = "none";
   };
