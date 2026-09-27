@@ -29,13 +29,6 @@ export const TopBar: Component<Props> = (props) => {
     input.value = "";
   };
 
-  // bMappable (kept internal to the store) = bCents().length - 1; require > 0
-  // so a degenerate root-only B can never enable Save (mappedCount 0 === 0).
-  const canSave = () =>
-    props.store.scaleA() !== null &&
-    props.store.bCents().length - 1 > 0 &&
-    props.store.stats().mappedCount === props.store.bCents().length - 1;
-
   return (
     <div class="topbar">
       <div class="topbar-title">🎵 Scale Remapper</div>
@@ -66,7 +59,7 @@ export const TopBar: Component<Props> = (props) => {
         <button disabled={props.store.scaleA() === null} onClick={() => props.store.runAutoMap()}>⚡ Auto-Map</button>
         <button disabled={props.store.scaleA() === null} onClick={() => props.store.runRandomMap()}>🎲 Random-Map</button>
         <button onClick={() => props.store.clearMapping()}>✕ Clear</button>
-        <button disabled={!canSave()} onClick={() => props.onSave()}>💾 Save .scl</button>
+        <button disabled={!props.store.canSave()} onClick={() => props.onSave()}>💾 Save .scl</button>
         <button onClick={() => props.onHelpClick?.()}>❓ Help</button>
       </div>
     </div>

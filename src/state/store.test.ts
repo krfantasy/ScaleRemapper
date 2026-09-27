@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import { createStore } from "./store";
+import { createStore, canSaveGate } from "./store";
 
 const EDO12_A = `! a.scl
 A Scale
@@ -244,6 +244,54 @@ describe("store — periodA memo", () => {
     const s = createStore();
     s.loadScaleA(EDO12_A, "A");
     expect(s.periodA()).toBe(1200);
+  });
+});
+
+describe("store — canSave gate", () => {
+  test("canSave is false initially (no scale A, nothing mapped)", () => {
+    expect(createStore().canSave()).toBe(false);
+  });
+
+  test("canSave is false when A is loaded but no B degree is mapped", () => {
+    const s = createStore();
+    s.loadScaleA(EDO12_A, "A");
+    expect(s.stats().mappedCount).toBe(0);
+    expect(s.canSave()).toBe(false);
+  });
+
+  test("canSave is false while the mapping is incomplete", () => {
+    const s = createStore();
+    s.loadScaleA(EDO12_A, "A");
+    s.connect(3, 5); // 1 of 12 mappable degrees mapped
+    expect(s.stats().mappedCount).toBe(1);
+    expect(s.canSave()).toBe(false);
+  });
+
+  test("canSave is true once every mappable B degree is mapped", () => {
+    const s = createStore();
+    s.loadScaleA(EDO12_A, "A");
+    s.runAutoMap();
+    expect(s.stats().mappedCount).toBe(s.bCents().length - 1);
+    expect(s.canSave()).toBe(true);
+  });
+
+  test("canSave flips back to false after clearMapping", () => {
+    const s = createStore();
+    s.loadScaleA(EDO12_A, "A");
+    s.runAutoMap();
+    expect(s.canSave()).toBe(true);
+    s.clearMapping();
+    expect(s.canSave()).toBe(false);
+  });
+
+  test("canSave is false for a degenerate root-only B (no mappable degrees)", () => {
+    // The parser rejects note counts below 1, so no public store path produces
+    // a root-only B (bCents = [root], mappedCount 0 === 0 mappable); exercise
+    // the gate's degenerate branch through the exported pure predicate — the
+    // same forced state TopBar.test.tsx stages via its store-override trick.
+    // The > 0 guard must keep Save off despite the degenerate 0 === 0 pass.
+    expect(canSaveGate(true, [0], 0)).toBe(false);
+    expect(canSaveGate(false, [0], 0)).toBe(false);
   });
 });
 

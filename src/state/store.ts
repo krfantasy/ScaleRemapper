@@ -25,6 +25,21 @@ function errMsg(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
+/**
+ * The save gate, in pure form so the store's `canSave` accessor and its
+ * consumers (TopBar's Save button, App.handleSave) share one predicate.
+ * A save is allowed only when: a source scale A is loaded, every mappable B
+ * degree is mapped (mappedCount === bCents.length - 1), AND there is at least
+ * one mappable B degree. The `> 0` guard stops a degenerate root-only B —
+ * unreachable through loadScaleB (the parser rejects note counts below 1),
+ * but possible via direct state mutation — from degenerately passing the
+ * `0 === 0` completeness check and enabling a malformed export. Exported so
+ * that unreachable branch stays directly testable.
+ */
+export function canSaveGate(aLoaded: boolean, bCents: number[], mappedCount: number): boolean {
+  return aLoaded && bCents.length - 1 > 0 && mappedCount === bCents.length - 1;
+}
+
 export function createStore() {
   const [scaleA, setScaleA] = createSignal<LoadedScale | null>(null);
   // Default 12-EDO is tagged 'default' (not 'preset') so the UI shows note names.
@@ -52,6 +67,10 @@ export function createStore() {
     return a.length > 0 ? a[a.length - 1] : 0;
   });
   const stats = createMemo(() => computeStats(mapping(), aCents(), bCents(), periodA()));
+  // Single source of truth for save enablement, consumed by both TopBar's Save
+  // button and App.handleSave (previously duplicated — and divergent — inline
+  // in each). See canSaveGate for the exact semantics.
+  const canSave = () => canSaveGate(scaleA() !== null, bCents(), stats().mappedCount);
 
   function resetMapping(): void {
     setMapping(emptyMapping(bMappable()));
@@ -163,6 +182,7 @@ export function createStore() {
     periodA,
     bCents,
     stats,
+    canSave,
     loadScaleA,
     loadScaleB,
     setBFromPreset,

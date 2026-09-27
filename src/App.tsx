@@ -47,8 +47,12 @@ const App: Component = () => {
   function handleSave() {
     const a = store.scaleA();
     const b = store.scaleB();
-    if (!a) return;
-    if (store.stats().mappedCount !== store.bCents().length - 1) return;
+    // Single save gate shared with TopBar's Save button (store.canSave): A
+    // loaded, all mappable B degrees mapped, and at least one mappable degree.
+    // handleSave only fires from that (disabled-when-false) button today, but
+    // guarding here keeps any future save trigger from exporting a degenerate
+    // or incomplete mapping. `!a` also narrows for the serialize call below.
+    if (!store.canSave() || !a) return;
     const sclText = serializeMappingToScl(
       store.mapping(),
       store.aCents(),
