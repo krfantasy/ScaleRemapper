@@ -7,7 +7,7 @@ export const Legend: Component = () => {
     { color: "#f59e0b", shape: "dot", label: "collapse (≥2 B→1 A)" },
     { color: "#22c55e", shape: "line", label: "<15¢" },
     { color: "#eab308", shape: "line", label: "15–30¢" },
-    { color: "#ef4444", shape: "line", label: ">30¢ / tie" },
+    { color: "#ef4444", shape: "line", label: ">30¢" },
   ];
   return (
     <div class="legend">

@@ -71,8 +71,8 @@ export const HelpWidget: Component<Props> = (props) => {
           <details>
             <summary>Reading the colors</summary>
             <p>
-              Connector color = tuning deviation. 🟢 green &lt; 15¢, 🟡 yellow 15–30¢, 🔴 red &gt; 30¢
-              (or a tie). Smaller deviation = closer to the source pitch.
+              Connector color = tuning deviation. 🟢 green &lt; 15¢, 🟡 yellow 15–30¢, 🔴 red &gt; 30¢.
+              Smaller deviation = closer to the source pitch.
             </p>
           </details>
           <details>
