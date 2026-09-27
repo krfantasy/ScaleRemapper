@@ -1,8 +1,5 @@
 import { describe, test, expect } from "vitest";
-import {
-  ratioToCents, centsToFrequency, frequencyToCents,
-  NEAREST_NEIGHBOR_RADIUS_CENTS,
-} from "./cents";
+import { ratioToCents, centsToFrequency, frequencyToCents } from "./cents";
 
 describe("ratioToCents", () => {
   test("2/1 is 1200 cents", () => expect(ratioToCents(2, 1)).toBeCloseTo(1200, 5));
@@ -19,8 +16,4 @@ describe("centsToFrequency", () => {
 describe("frequencyToCents", () => {
   test("880 Hz at 440 ref is 1200 cents", () => expect(frequencyToCents(880, 440)).toBeCloseTo(1200, 5));
   test("440 Hz at 440 ref is 0 cents", () => expect(frequencyToCents(440, 440)).toBeCloseTo(0, 5));
-});
-
-describe("NEAREST_NEIGHBOR_RADIUS_CENTS", () => {
-  test("is 50 cents", () => expect(NEAREST_NEIGHBOR_RADIUS_CENTS).toBe(50));
 });

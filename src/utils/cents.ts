@@ -1,5 +1,4 @@
 // Standard reference: A4 = 440 Hz. Cents are measured from the scale root (C).
-export const NEAREST_NEIGHBOR_RADIUS_CENTS = 50;
 
 /** Convert a just-intonation ratio to cents. */
 export function ratioToCents(numerator: number, denominator: number): number {
