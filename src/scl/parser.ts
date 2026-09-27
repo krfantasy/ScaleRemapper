@@ -44,8 +44,8 @@ export function parseScl(scl: string): SourceScale {
     entryStart = 2;
   }
 
-  if (Number.isNaN(count) || count < 0) {
-    throw new Error(`Invalid .scl note count.`);
+  if (Number.isNaN(count) || count < 1) {
+    throw new Error(`Invalid .scl note count: Scala requires at least 1 tone.`);
   }
 
   const entryLines = meaningful.slice(entryStart, entryStart + count);
@@ -61,8 +61,9 @@ export function parseScl(scl: string): SourceScale {
   }
 
   const lastCents = degrees[degrees.length - 1].cents;
-  // periodRaw = verbatim text of the last entry; "" for a root-only scale.
-  const periodRaw = degrees.length > 1 ? degrees[degrees.length - 1].raw : "";
+  // periodRaw = verbatim text of the last entry; count >= 1 guarantees the
+  // root-only case (no entries) cannot occur.
+  const periodRaw = degrees[degrees.length - 1].raw;
   return {
     description,
     degrees,

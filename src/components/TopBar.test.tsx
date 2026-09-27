@@ -1,7 +1,7 @@
 import { describe, test, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@solidjs/testing-library";
 import { TopBar } from "./TopBar";
-import { createStore } from "../state/store";
+import { createStore, type Store } from "../state/store";
 
 const EDO12 = `! a.scl\nA\n12\n${Array.from({ length: 11 }, (_, i) => `${(i + 1) * 100}.0.`).join("\n")}\n2/1`;
 
@@ -40,6 +40,31 @@ describe("TopBar", () => {
     store.loadScaleA(EDO12, "A");
     store.runAutoMap();
     expect(saveBtn).not.toBeDisabled();
+  });
+
+  test("Save stays disabled when B has no mappable degrees", () => {
+    // A root-only B (degrees = [root]) is unreachable through the public API
+    // once the parser rejects count-0 files, so force the degenerate store the
+    // canSave gate defends against: bCents = [root] and mappedCount 0 ===
+    // bCents.length - 1 0 would otherwise enable Save.
+    const base = createStore();
+    base.loadScaleA(EDO12, "A");
+    const store = {
+      ...base,
+      scaleB: () => ({
+        scale: {
+          description: "",
+          degrees: [{ degree: 0, cents: 0, raw: "1/1" }],
+          periodRaw: "",
+          isOctaveClosing: false,
+        },
+        name: "root-only",
+        origin: "file",
+      }),
+      bCents: () => [0],
+    } as unknown as Store;
+    render(() => <TopBar store={store} onSave={() => {}} />);
+    expect(screen.getByRole("button", { name: /save/i })).toBeDisabled();
   });
 
   test("Load source .scl button triggers hidden file input", () => {

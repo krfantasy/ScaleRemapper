@@ -29,8 +29,11 @@ export const TopBar: Component<Props> = (props) => {
     input.value = "";
   };
 
+  // bMappable (kept internal to the store) = bCents().length - 1; require > 0
+  // so a degenerate root-only B can never enable Save (mappedCount 0 === 0).
   const canSave = () =>
     props.store.scaleA() !== null &&
+    props.store.bCents().length - 1 > 0 &&
     props.store.stats().mappedCount === props.store.bCents().length - 1;
 
   return (

@@ -120,11 +120,24 @@ describe("parseScl - edge cases", () => {
     expect(scale.isOctaveClosing).toBe(false);
   });
 
-  test("periodRaw is empty string for a root-only scale (count 0)", () => {
-    // count = 0 is permitted by the spec's lower limit; produces a root-only scale.
-    const scale = parseScl(`t\n0\n`);
-    expect(scale.degrees).toHaveLength(1);
-    expect(scale.periodRaw).toBe("");
+});
+
+describe("parseScl - note count limits", () => {
+  test("throws when the note count is 0 (Scala minimum is 1 tone)", () => {
+    expect(() => parseScl(`t\n0\n`)).toThrow(/count/i);
+  });
+
+  test("throws when the note count is negative", () => {
+    // The count line after a description can carry a negative (the bare-integer
+    // first-line form cannot); either way it must be rejected.
+    expect(() => parseScl(`t\n-3\n2/1\n2/1\n2/1`)).toThrow(/count/i);
+  });
+
+  test("a valid count-1 file still parses", () => {
+    const scale = parseScl(`t\n1\n2/1`);
+    expect(scale.degrees).toHaveLength(2);
+    expect(scale.periodRaw).toBe("2/1");
+    expect(scale.isOctaveClosing).toBe(true);
   });
 });
 
