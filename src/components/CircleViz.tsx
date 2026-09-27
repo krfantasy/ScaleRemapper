@@ -267,8 +267,14 @@ export const CircleViz: Component<Props> = (props) => {
                       const dev = sounded - bc[assign().bDegree];
                       const n = octaveDisplacement(assign().aDegree, assign().bDegree, ac, bc, pA);
                       const inner = innerDots().find((d) => d.bDegree === assign().bDegree)!;
-                      const srcCents = ac[assign().aDegree];
-                      const x2 = dotX(srcCents, periodA(), R_OUTER), y2 = dotY(srcCents, periodA(), R_OUTER);
+                      // Connector A-end at the SOUNDED pitch (ac + n·periodA), not
+                      // the raw A-degree cents — for a downward wrap (n < 0) the
+                      // endpoint is semantically the wrapped pitch. angle() is
+                      // periodic in A's period, so the SVG point coincides with the
+                      // A-dot's position today (integer n shifts the angle by n·TAU
+                      // and sin/cos are 2π-periodic); visible line, hit line, and
+                      // the octave label below all share this endpoint.
+                      const x2 = dotX(sounded, periodA(), R_OUTER), y2 = dotY(sounded, periodA(), R_OUTER);
                       return (
                         <>
                           <line data-role="connector" data-bdegree={assign().bDegree}

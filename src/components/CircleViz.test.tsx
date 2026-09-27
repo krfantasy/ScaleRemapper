@@ -180,4 +180,43 @@ describe("CircleViz", () => {
     expect(label).not.toBeNull();
     expect(label?.textContent).toMatch(/\+1/);
   });
+
+  test("downward-wrapped connector endpoint is computed from the sounded cents", () => {
+    const store = createStore();
+    // Thai Ranat A (period 1200¢), same scale as the +1oct test above.
+    const thaiA = `! thai.scl\nThai\n7\n!\n161.0\n346.0\n526.0\n686.0\n862.0\n1028.571\n1200.0`;
+    store.loadScaleA(thaiA, "Thai");
+    // Default 12-EDO B: degree 1 sits at 100¢. Connect B-1 (100¢) → A-5 (862¢):
+    // n = round((100 − 862)/1200) = −1, so the sounded pitch is 862 − 1200 = −338¢
+    // and the connector must carry a "−1oct" label anchored at that endpoint.
+    store.connect(1, 5);
+    const { container } = render(() => <CircleViz store={store} audition={stubAudition()} />);
+    const connector = container.querySelector(
+      'line[data-role="connector"][data-bdegree="1"]',
+    ) as SVGLineElement;
+    expect(connector).not.toBeNull();
+    // Expected x2/y2 from the same formula the component uses (dotX/dotY on the
+    // sounded cents with the drawing period = A's last-degree cents = 1200).
+    // NOTE: by the periodic-angle equivalence, the pre-fix endpoint (raw
+    // ac[aDegree] = 862¢) lands on the same SVG point within float noise, so
+    // this assertion pins the sounded-cents wiring but cannot by itself
+    // distinguish the fix — see task-4 brief / controller ruling.
+    const TAU = Math.PI * 2, CX = 200, CY = 200, R_OUTER = 180;
+    const angle = (cents: number, period: number) => (cents / period) * TAU;
+    const sounded = 862 + -1 * 1200;
+    const expX = CX + R_OUTER * Math.sin(angle(sounded, 1200));
+    const expY = CY - R_OUTER * Math.cos(angle(sounded, 1200));
+    expect(Number(connector.getAttribute("x2"))).toBeCloseTo(expX, 9);
+    expect(Number(connector.getAttribute("y2"))).toBeCloseTo(expY, 9);
+    // The hit-area line shares the endpoint exactly (same x2/y2 source).
+    const hit = container.querySelector(
+      'line[data-role="connector-hit"][data-bdegree="1"]',
+    ) as SVGLineElement;
+    expect(hit.getAttribute("x2")).toBe(connector.getAttribute("x2"));
+    expect(hit.getAttribute("y2")).toBe(connector.getAttribute("y2"));
+    // The octave label anchors at that same endpoint and reads −1.
+    const label = container.querySelector('[data-role="octave-label"][data-bdegree="1"]');
+    expect(label).not.toBeNull();
+    expect(label?.textContent).toMatch(/-1oct/);
+  });
 });
