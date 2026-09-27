@@ -123,6 +123,70 @@ describe("serializeMappingToScl", () => {
     // Final line is B's period verbatim.
     expect(lines[12]).toBe("3/1");
   });
+
+  test("folds negative sounded cents into [0, periodB) on export (manual-connect repro)", () => {
+    // TODO repro: a B-degree connected to an A-degree at 1100¢ (periodA 1200)
+    // sounds BELOW the root: displacedCents = 1100 - 1200 = -100. The root
+    // (B-degree 0) itself is never serialized, so the repro reaches the export
+    // path through B-degree 1 (100¢) → same A-degree → same sounded -100.
+    // The entry must export folded as 1100, not the invalid "-100.0".
+    const B = parseScl(`! repro.scl\nRepro\n2\n100.0\n2/1`);
+    const aCents = [0, 1100, 1200];
+    const m = mappingOf([0, 1], [1, 1]); // B0(root)→A1 per the TODO repro, B1→A1
+    const out = serializeMappingToScl(
+      m,
+      aCents,
+      B.degrees.map((d) => d.cents),
+      1200,
+      { scale: B, name: "Repro", origin: "file" },
+      "A",
+    );
+    const lines = out.split("\n");
+    // lines[0] = header, lines[1] = "2", lines[2] = B1's entry, lines[3] = "2/1".
+    expect(lines[2]).toBe("1100.0");
+    expect(out).not.toContain("-100");
+  });
+
+  test("sounded cents >= periodB export verbatim (spec §3.5 octave wrap)", () => {
+    // Reachable (sparse A, or periodA > periodB): a top B-degree whose nearest
+    // A-pitch sits a period up sounds ABOVE periodB. Spec §3.5 writes the
+    // displaced value verbatim (the sparse-A test above asserts 1500.0 for
+    // periodB 1200), and folding those would collapse degrees onto lower
+    // pitches — so the fold is bounded to NEGATIVE sounded cents, whose entry
+    // lines are what synths reject.
+    const aCents = [0, 1901.955];
+    const m = mappingOf(...Array.from({ length: 12 }, (_, b) => [b, 1] as [number, number]));
+    const out = serializeMappingToScl(m, aCents, A_CENTS_12, 1901.955, B_12, "A");
+    const lines = out.split("\n");
+    // B1..B9 (100..900¢) sit nearer A1 one period DOWN: sounded 0 (in range).
+    // B10, B11 (1000, 1100¢): n = 0, sounded 1901.955 ≥ periodB 1200 → verbatim.
+    expect(lines[2]).toBe(formatCents(0));
+    expect(lines[11]).toBe("1901.955");
+    expect(lines[12]).toBe("1901.955");
+    expect(lines).toHaveLength(14);
+  });
+
+  test("in-range sounded cents export identically (no drift from the fold)", () => {
+    // 701.955 is inside [0, 1200): folding must pass it through bit-identically.
+    const aCents = [0, 701.955, 1200];
+    const m = mappingOf(...Array.from({ length: 12 }, (_, b) => [b, 1] as [number, number]));
+    const out = serializeMappingToScl(m, aCents, A_CENTS_12, 1200, B_12, "A");
+    const lines = out.split("\n");
+    // B2..B11: displacement 0, sounded 701.955 verbatim (B1 wraps down and
+    // folds back to 701.955 too — covered by the repro test above).
+    for (let i = 3; i <= 12; i++) expect(lines[i]).toBe("701.955");
+  });
+
+  test("a sounded value a hair under periodB stays (no over-fold to 0)", () => {
+    // 1199.9999 is IN range: float residue near periodB must not push it to 0
+    // — only genuinely out-of-range values fold.
+    const aCents = [0, 1199.9999, 1200];
+    const m = mappingOf(...Array.from({ length: 12 }, (_, b) => [b, 1] as [number, number]));
+    const out = serializeMappingToScl(m, aCents, A_CENTS_12, 1200, B_12, "A");
+    const lines = out.split("\n");
+    // B11 (1100¢): displacement 0 → sounded 1199.9999, exported verbatim.
+    expect(lines[12]).toBe("1199.9999");
+  });
 });
 
 describe("formatCents", () => {
