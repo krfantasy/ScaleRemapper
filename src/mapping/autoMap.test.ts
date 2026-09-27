@@ -136,7 +136,7 @@ describe("randomMap(aCents, bCents)", () => {
   // Structural validity check used across the random tests: one assignment per
   // non-period B-degree, no nulls, A-degree never A's period (last index).
   const checkShape = (aCents: number[], bCents: number[]) => {
-    const { mapping } = randomMap(aCents, bCents);
+    const { mapping } = randomMap(aCents, bCents, 0);
     expect(mapping.assignments).toHaveLength(bCents.length - 1);
     expect(mapping.assignments.every((a) => a !== null)).toBe(true);
     const aLast = aCents.length - 1;
@@ -160,7 +160,7 @@ describe("randomMap(aCents, bCents)", () => {
     // Collect the A-degree chosen for B-degree 0 across many runs.
     const choicesForB0 = new Set<number>();
     for (let i = 0; i < 50; i++) {
-      const { mapping } = randomMap(EDO19, EDO12);
+      const { mapping } = randomMap(EDO19, EDO12, 0);
       choicesForB0.add(mapping.assignments[0]!.aDegree);
     }
     // With 19 candidates and 50 trials, seeing only 1 distinct value would be
@@ -177,7 +177,7 @@ describe("randomMap(aCents, bCents)", () => {
     // A has only its root (aCents.length === 1). randomMap must not crash; it
     // maps every B-degree to A-degree 0 (the only valid index after clamping).
     const rootOnlyA = [0];
-    const { mapping } = randomMap(rootOnlyA, EDO12);
+    const { mapping } = randomMap(rootOnlyA, EDO12, 0);
     expect(mapping.assignments).toHaveLength(EDO12.length - 1);
     expect(mapping.assignments.every((a) => a?.aDegree === 0)).toBe(true);
   });

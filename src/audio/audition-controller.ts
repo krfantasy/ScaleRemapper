@@ -21,8 +21,9 @@ export const DEFAULT_AUDITION_SETTINGS: AuditionSettings = {
   holdMs: 500,
 };
 
-// Range guards used to clamp incoming slider values.
-const RANGES = {
+// Range guards used to clamp incoming slider values; also drives the SidePanel
+// time sliders' log-scale mapping (sustainLevel is a linear 0–1 slider there).
+export const RANGES = {
   attackMs: { min: 1, max: 2000 },
   decayMs: { min: 1, max: 2000 },
   sustainLevel: { min: 0, max: 1 },

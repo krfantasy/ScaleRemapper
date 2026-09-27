@@ -4,6 +4,7 @@ import type { AuditionController } from "../audio/audition-controller";
 import { displacedCents, octaveDisplacement } from "../mapping/displacement";
 import { noteName } from "../scl/edo";
 import { findCollisions } from "../mapping/deviation";
+import { deviationColor } from "./deviation-color";
 
 interface Props { store: Store; audition: AuditionController; }
 
@@ -19,13 +20,6 @@ function dotX(cents: number, period: number, r: number): number {
 }
 function dotY(cents: number, period: number, r: number): number {
   return CY - r * Math.cos(angle(cents, period));
-}
-
-function deviationColor(dev: number): string {
-  const a = Math.abs(dev);
-  if (a < 15) return "#22c55e";
-  if (a <= 30) return "#eab308";
-  return "#ef4444";
 }
 
 const PAD = 16;

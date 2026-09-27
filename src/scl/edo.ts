@@ -1,4 +1,5 @@
 import type { LoadedScale, ScaleDegree, SourceScale } from "./types";
+import { formatCents } from "./serializer";
 
 /** Built-in EDO preset values, shown in the TopBar dropdown. */
 export const EDO_PRESETS = [12, 19, 22, 31, 41, 53] as const;
@@ -20,7 +21,7 @@ export function edoScale(edo: number): LoadedScale {
   const degrees: ScaleDegree[] = [];
   for (let i = 0; i <= edo; i++) {
     const cents = i * step;
-    const raw = i === 0 ? "1/1" : i === edo ? "2/1" : formatCentsEntry(cents);
+    const raw = i === 0 ? "1/1" : i === edo ? "2/1" : formatCents(cents);
     degrees.push({ degree: i, cents, raw });
   }
   const scale: SourceScale = {
@@ -30,14 +31,6 @@ export function edoScale(edo: number): LoadedScale {
     isOctaveClosing: true,
   };
   return { scale, name: `${edo}-EDO`, origin: "preset" };
-}
-
-/** Format a cents value for use as an .scl entry text: 6 decimals, trailing zeros stripped, always has a ".". */
-function formatCentsEntry(cents: number): string {
-  const rounded = Math.round(cents * 1e6) / 1e6;
-  let str = rounded.toFixed(6);
-  str = str.replace(/0+$/, "").replace(/\.$/, ".0");
-  return str;
 }
 
 /**

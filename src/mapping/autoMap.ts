@@ -68,7 +68,7 @@ export function autoMap(aCents: number[], bCents: number[], periodA: number): Au
  * allowed, so collapses are common — that's expected and valid (collapses never
  * block export).
  */
-export function randomMap(aCents: number[], bCents: number[], periodA = 0): AutoMapResult {
+export function randomMap(aCents: number[], bCents: number[], periodA: number): AutoMapResult {
   // Valid A-degrees are 0 .. aCents.length-2 (A's period at the last index is
   // excluded). If A has only its root (length 1) there are no real candidates;
   // clamp to 1 so Math.floor(Math.random() * n) is well-defined — it returns 0,

@@ -1,6 +1,7 @@
 import { For, Show, type Component } from "solid-js";
 import type { Store } from "../state/store";
 import type { AuditionController, AuditionSettings } from "../audio/audition-controller";
+import { RANGES } from "../audio/audition-controller";
 import type { LoadedScale } from "../scl/types";
 import type { Waveform } from "../audio/synth";
 import { posToValue, valueToPos } from "../utils/log-scale";
@@ -21,15 +22,6 @@ function ScaleBlock(props: { loaded: LoadedScale | null; fallback: string }) {
   );
 }
 
-// Range metadata per slider. Sustain is a level (0–1, linear); the others are
-// log-scale time sliders.
-const TIME_RANGES = {
-  attackMs: { min: 1, max: 2000 },
-  decayMs: { min: 1, max: 2000 },
-  releaseMs: { min: 1, max: 3000 },
-  holdMs: { min: 50, max: 5000 },
-} as const;
-
 function formatMs(ms: number): string {
   if (ms < 1000) return `${Math.round(ms)} ms`;
   return `${(ms / 1000).toFixed(2)} s`;
@@ -43,11 +35,11 @@ export const SidePanel: Component<Props> = (props) => {
   // Slider value is a 0..1000 integer; converted to/from the actual time via log-scale.
   const SLIDER_MAX = 1000;
 
-  function timeSliderField<K extends keyof typeof TIME_RANGES>(
+  function timeSliderField<K extends keyof typeof RANGES>(
     key: K,
     label: string,
   ) {
-    const range = TIME_RANGES[key];
+    const range = RANGES[key];
     const value = () => s()[key];
     const pos = () => valueToPos(value(), range.min, range.max) * SLIDER_MAX;
     const onInput = (e: Event) => {

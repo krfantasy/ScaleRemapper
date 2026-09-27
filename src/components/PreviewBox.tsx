@@ -3,15 +3,9 @@ import type { Store } from "../state/store";
 import { noteName } from "../scl/edo";
 import { serializeMappingToScl } from "../scl/serializer";
 import { displacedCents } from "../mapping/displacement";
+import { deviationColor } from "./deviation-color";
 
 interface Props { store: Store; }
-
-function deviationColor(dev: number): string {
-  const a = Math.abs(dev);
-  if (a < 15) return "#22c55e";
-  if (a <= 30) return "#eab308";
-  return "#ef4444";
-}
 
 function fmtSigned(cents: number): string {
   const sign = cents >= 0 ? "+" : "−";
