@@ -85,13 +85,18 @@ function parseEntry(entry: string): number {
     if (parts.length !== 2) throw new Error(`Cannot parse ratio entry: "${entry}"`);
     const num = parseFloat(parts[0]);
     const den = parseFloat(parts[1]);
-    if (Number.isNaN(num) || Number.isNaN(den) || den === 0) {
+    // Non-positive numerators/denominators would yield -Infinity/NaN from
+    // ratioToCents (0/1, -3/2, 3/-2), so reject them like other malformed
+    // entries. Scala ratios are positive integers n/d with d != 0.
+    if (Number.isNaN(num) || Number.isNaN(den) || num <= 0 || den <= 0) {
       throw new Error(`Cannot parse ratio entry: "${entry}"`);
     }
     return ratioToCents(num, den);
   }
   // Bare integer → ratio n/1.
   const v = parseFloat(t);
-  if (Number.isNaN(v)) throw new Error(`Cannot parse entry: "${entry}"`);
+  if (Number.isNaN(v) || v <= 0) {
+    throw new Error(`Cannot parse entry: "${entry}"`);
+  }
   return ratioToCents(v, 1);
 }

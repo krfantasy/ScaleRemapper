@@ -127,3 +127,32 @@ describe("parseScl - edge cases", () => {
     expect(scale.periodRaw).toBe("");
   });
 });
+
+describe("parseScl - non-positive entries", () => {
+  test("throws on zero numerator (0/1)", () => {
+    expect(() => parseScl(`t\n1\n0/1`)).toThrow(/parse/i);
+  });
+
+  test("throws on negative numerator (-3/2)", () => {
+    expect(() => parseScl(`t\n1\n-3/2`)).toThrow(/parse/i);
+  });
+
+  test("throws on negative denominator (3/-2)", () => {
+    expect(() => parseScl(`t\n1\n3/-2`)).toThrow(/parse/i);
+  });
+
+  test("throws on bare zero (0)", () => {
+    expect(() => parseScl(`t\n1\n0`)).toThrow(/parse/i);
+  });
+
+  test("throws on bare negative integer (-3)", () => {
+    expect(() => parseScl(`t\n1\n-3`)).toThrow(/parse/i);
+  });
+
+  test("still parses positive ratios unchanged", () => {
+    const scale = parseScl(`t\n2\n3/2\n2/1`);
+    expect(scale.degrees[1].cents).toBeCloseTo(701.955, 2);
+    expect(scale.degrees[2].cents).toBeCloseTo(1200, 5);
+    expect(scale.isOctaveClosing).toBe(true);
+  });
+});
