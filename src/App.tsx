@@ -26,12 +26,9 @@ const App: Component = () => {
   // Help modal open/close — always starts closed (no persistence).
   const [helpOpen, setHelpOpen] = createSignal(false);
 
-  // Vertical splitter (between CircleViz and SidePanel): dragging the boundary
-  // LEFT shrinks the side panel, RIGHT grows it. Standard splitter convention —
-  // the delta sign already matches "right = grow", but we negate so the drag
-  // direction feels natural (drag toward the panel to shrink it).
-  // Actually: delta is +when moving right; SidePanel is on the RIGHT, so moving
-  // the handle right (into the panel) should SHRINK it → negate.
+  // Vertical splitter (between CircleViz and SidePanel): SidePanel is on the
+  // RIGHT. Moving the handle RIGHT (into the panel) should SHRINK it → negate
+  // (Splitter reports +delta when the handle moves right).
   const onSidePanelDrag = (delta: number) =>
     setSidePanelWidth((w) => Math.max(SIDE_PANEL_MIN, Math.min(SIDE_PANEL_MAX, w - delta)));
   // Horizontal splitter (between main row and PreviewBox): PreviewBox is BELOW.
