@@ -32,7 +32,7 @@ engine maps B's grid onto A's pitches. A few examples:
   (destination grid) defaults to 12-EDO and can be replaced by a loaded `.scl`, a built-in
   EDO preset (`12, 19, 22, 31, 41, 53`), or reset to the 12-EDO default with one click.
   Parser is hand-rolled client-side (the format is small enough to implement directly,
-  ~30 lines).
+  ~100 lines).
 - **Auto-Map** — one click snaps every B-degree to its nearest A-pitch.
 - **Manual connect** — drag from a dot on one ring to a dot on the other to wire up
   individual degrees. Mix freely with Auto-Map to nudge after the bulk pass.
