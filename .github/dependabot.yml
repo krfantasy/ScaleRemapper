@@ -1,0 +1,23 @@
+# Dependabot version-update configuration.
+# Security updates are controlled separately in the repo settings:
+#   Settings -> Code security and analysis -> Dependabot security updates
+# (no file needed for those - GitHub opens fix PRs automatically).
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 10
+    groups:
+      # Keep routine bumps in one reviewable PR instead of a flood of small ones.
+      dev-dependencies:
+        applies-to: version-updates
+        dependency-type: development
+      runtime-dependencies:
+        applies-to: version-updates
+        dependency-type: production
+    # Security updates stay ungrouped so each fix is its own small, urgent PR.

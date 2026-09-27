@@ -33,6 +33,9 @@ dist-ssr
 *.sw?
 .playwright-mcp/
 .zcode/
+.opencode/
+.pi/
+.mcp.json
 
 # Docs
 TODO.org
