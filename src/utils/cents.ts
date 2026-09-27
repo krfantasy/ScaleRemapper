@@ -12,8 +12,3 @@ export function ratioToCents(numerator: number, denominator: number): number {
 export function centsToFrequency(centsFromRoot: number, rootFrequency = 261.6256): number {
   return rootFrequency * Math.pow(2, centsFromRoot / 1200);
 }
-
-/** Inverse of centsToFrequency. */
-export function frequencyToCents(frequency: number, rootFrequency = 261.6256): number {
-  return 1200 * Math.log2(frequency / rootFrequency);
-}
