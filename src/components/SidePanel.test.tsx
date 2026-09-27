@@ -22,15 +22,53 @@ function makeAudition() {
   return createAuditionController(createStore(), { synth: mockSynth() });
 }
 
-describe("SidePanel", () => {
-  test("shows 'No scale loaded' when A is null", () => {
+// Helper: find a section by its label text (follows the section-index pattern
+// used by the with-A tests below).
+function sectionByLabel(label: string): HTMLElement | undefined {
+  return [...document.querySelectorAll("section")].find(
+    (s) => s.querySelector(".label")?.textContent === label,
+  );
+}
+
+describe("SidePanel before A is loaded", () => {
+  test("Scale A section is absent (no 'No scale loaded' placeholder)", () => {
     const store = createStore();
     const audition = makeAudition();
     render(() => <SidePanel store={store} audition={audition} />);
-    expect(screen.getByText(/no scale loaded/i)).toBeInTheDocument();
+    expect(screen.queryByText(/no scale loaded/i)).toBeNull();
+    expect(sectionByLabel("Scale A (source)")).toBeUndefined();
   });
 
-  test("after loading A, shows Scale A section with note count and period", () => {
+  test("Scale B section IS visible showing the 12-EDO default", () => {
+    const store = createStore();
+    const audition = makeAudition();
+    render(() => <SidePanel store={store} audition={audition} />);
+    const bSection = sectionByLabel("Scale B (dest)");
+    expect(bSection).toBeDefined();
+    expect(bSection?.textContent).toContain("12-EDO");
+  });
+
+  test("Selected section is not rendered (gated on scaleA)", () => {
+    const store = createStore();
+    const audition = makeAudition();
+    render(() => <SidePanel store={store} audition={audition} />);
+    expect(screen.queryByText("Selected")).toBeNull();
+  });
+
+  test("Audition section IS visible with toggle and all five sliders", () => {
+    const store = createStore();
+    const audition = makeAudition();
+    render(() => <SidePanel store={store} audition={audition} />);
+    const toggle = screen.getByRole("button", { name: /audition/i });
+    expect(toggle.textContent).toMatch(/off/i);
+    for (const name of [/attack/i, /decay/i, /sustain/i, /hold/i, /release/i]) {
+      expect(screen.getByLabelText(name)).toBeInTheDocument();
+    }
+  });
+});
+
+describe("SidePanel", () => {
+  test("after loading A, Scale A section renders with note count and period", () => {
     const store = createStore();
     store.loadScaleA(EDO12_A, "A Scale");
     const audition = makeAudition();
@@ -47,6 +85,17 @@ describe("SidePanel", () => {
     const audition = makeAudition();
     render(() => <SidePanel store={store} audition={audition} />);
     expect(screen.getAllByText("12-EDO").length).toBeGreaterThan(0);
+  });
+
+  test("after loading A, Selected section renders and shows a selection", () => {
+    const store = createStore();
+    store.loadScaleA(EDO12_A, "A Scale");
+    store.select("B", 3);
+    const audition = makeAudition();
+    render(() => <SidePanel store={store} audition={audition} />);
+    const selSection = sectionByLabel("Selected");
+    expect(selSection).toBeDefined();
+    expect(selSection?.querySelector(".selected-note")?.textContent).toBe("B degree 3");
   });
 
   test("stats show mapped count (12/12 after autoMap)", () => {

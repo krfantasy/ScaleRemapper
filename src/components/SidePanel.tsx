@@ -72,17 +72,19 @@ export const SidePanel: Component<Props> = (props) => {
 
   return (
     <div class="side-panel">
-      <Show when={props.store.scaleA()} fallback={<div>No scale loaded</div>}>
+      <Show when={props.store.scaleA()}>
         <section>
           <div class="label">Scale A (source)</div>
           <ScaleBlock loaded={props.store.scaleA()} fallback="No source loaded" />
         </section>
         <hr />
-        <section>
-          <div class="label">Scale B (dest)</div>
-          <ScaleBlock loaded={props.store.scaleB()} fallback="" />
-        </section>
-        <hr />
+      </Show>
+      <section>
+        <div class="label">Scale B (dest)</div>
+        <ScaleBlock loaded={props.store.scaleB()} fallback="" />
+      </section>
+      <hr />
+      <Show when={props.store.scaleA()}>
         <section>
           <div class="label">Selected</div>
           <Show when={sel()} fallback={<div>—</div>}>
@@ -90,66 +92,66 @@ export const SidePanel: Component<Props> = (props) => {
           </Show>
         </section>
         <hr />
-        <section>
-          <div class="label">Audition</div>
-          <button
-            class="audition-toggle"
-            classList={{ on: enabled() }}
-            title="When ON, click a dot to hear its pitch. Mapping edits are disabled while ON."
-            aria-label="Audition mode toggle"
-            onClick={() => props.audition.setEnabled(!enabled())}
-          >
-            🎧 Audition: {enabled() ? "On" : "Off"}
-          </button>
-          <div class="audition-sliders">
-            <label class="slider-row">
-              <span class="slider-label">wave</span>
-              <select
-                aria-label="wave"
-                value={s().waveform}
-                onChange={(e) =>
-                  props.audition.updateSettings({
-                    waveform: (e.target as HTMLSelectElement).value as Waveform,
-                  })
-                }
-              >
-                <option value="sine">sine</option>
-                <option value="square">square</option>
-                <option value="triangle">triangle</option>
-                <option value="sawtooth">saw</option>
-              </select>
-            </label>
-            {timeSliderField("attackMs", "Attack")}
-            {timeSliderField("decayMs", "Decay")}
-            <label class="slider-row">
-              <span class="slider-label">Sustain</span>
-              <input
-                type="range" min={0} max={1} step={0.01}
-                aria-label="Sustain"
-                value={s().sustainLevel}
-                onInput={(e) =>
-                  props.audition.updateSettings({
-                    sustainLevel: Number((e.target as HTMLInputElement).value),
-                  })
-                }
-              />
-              <span class="slider-value">{s().sustainLevel.toFixed(2)}</span>
-            </label>
-            {timeSliderField("holdMs", "Hold")}
-            {timeSliderField("releaseMs", "Release")}
-          </div>
-        </section>
-        <hr />
-        <section>
-          <div class="label">Mapping Stats</div>
-          <div>mapped: <strong>{props.store.stats().mappedCount}/{props.store.bCents().length - 1}</strong></div>
-          <div>avg error: <strong>{props.store.stats().avgError.toFixed(1)}¢</strong></div>
-          <div>max error: <strong>{props.store.stats().maxError.toFixed(1)}¢</strong></div>
-          <div>collapses: <strong>{props.store.stats().collapses}</strong></div>
-          <div>collisions: <strong>{props.store.stats().collisions}</strong></div>
-          <div>ties: <strong>{props.store.stats().ties}</strong></div>
-        </section>
       </Show>
+      <section>
+        <div class="label">Audition</div>
+        <button
+          class="audition-toggle"
+          classList={{ on: enabled() }}
+          title="When ON, click a dot to hear its pitch. Mapping edits are disabled while ON."
+          aria-label="Audition mode toggle"
+          onClick={() => props.audition.setEnabled(!enabled())}
+        >
+          🎧 Audition: {enabled() ? "On" : "Off"}
+        </button>
+        <div class="audition-sliders">
+          <label class="slider-row">
+            <span class="slider-label">wave</span>
+            <select
+              aria-label="wave"
+              value={s().waveform}
+              onChange={(e) =>
+                props.audition.updateSettings({
+                  waveform: (e.target as HTMLSelectElement).value as Waveform,
+                })
+              }
+            >
+              <option value="sine">sine</option>
+              <option value="square">square</option>
+              <option value="triangle">triangle</option>
+              <option value="sawtooth">saw</option>
+            </select>
+          </label>
+          {timeSliderField("attackMs", "Attack")}
+          {timeSliderField("decayMs", "Decay")}
+          <label class="slider-row">
+            <span class="slider-label">Sustain</span>
+            <input
+              type="range" min={0} max={1} step={0.01}
+              aria-label="Sustain"
+              value={s().sustainLevel}
+              onInput={(e) =>
+                props.audition.updateSettings({
+                  sustainLevel: Number((e.target as HTMLInputElement).value),
+                })
+              }
+            />
+            <span class="slider-value">{s().sustainLevel.toFixed(2)}</span>
+          </label>
+          {timeSliderField("holdMs", "Hold")}
+          {timeSliderField("releaseMs", "Release")}
+        </div>
+      </section>
+      <hr />
+      <section>
+        <div class="label">Mapping Stats</div>
+        <div>mapped: <strong>{props.store.stats().mappedCount}/{props.store.bCents().length - 1}</strong></div>
+        <div>avg error: <strong>{props.store.stats().avgError.toFixed(1)}¢</strong></div>
+        <div>max error: <strong>{props.store.stats().maxError.toFixed(1)}¢</strong></div>
+        <div>collapses: <strong>{props.store.stats().collapses}</strong></div>
+        <div>collisions: <strong>{props.store.stats().collisions}</strong></div>
+        <div>ties: <strong>{props.store.stats().ties}</strong></div>
+      </section>
     </div>
   );
 };
