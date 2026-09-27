@@ -36,9 +36,11 @@ const App: Component = () => {
     setSidePanelWidth((w) => Math.max(SIDE_PANEL_MIN, Math.min(SIDE_PANEL_MAX, w - delta)));
   // Horizontal splitter (between main row and PreviewBox): PreviewBox is BELOW.
   // Moving the handle DOWN (into the preview) should SHRINK it → negate.
+  // Same upper bound the drag clamps to; read at render time for aria-valuemax.
+  const previewMax = () => Math.floor(window.innerHeight * 0.6);
   const onPreviewDrag = (delta: number) =>
     setPreviewHeight((h) =>
-      Math.max(PREVIEW_MIN, Math.min(Math.floor(window.innerHeight * 0.6), h - delta)),
+      Math.max(PREVIEW_MIN, Math.min(previewMax(), h - delta)),
     );
 
   const audition = createAuditionController(store);
@@ -89,12 +91,26 @@ const App: Component = () => {
             </div>
             <Legend />
           </div>
-          <Splitter orientation="vertical" onDrag={onSidePanelDrag} />
+          <Splitter
+            orientation="vertical"
+            onDrag={onSidePanelDrag}
+            value={sidePanelWidth()}
+            min={SIDE_PANEL_MIN}
+            max={SIDE_PANEL_MAX}
+            label="Resize side panel"
+          />
           <div class="side-panel-wrap" style={{ width: `${sidePanelWidth()}px` }}>
             <SidePanel store={store} audition={audition} />
           </div>
         </div>
-        <Splitter orientation="horizontal" onDrag={onPreviewDrag} />
+        <Splitter
+          orientation="horizontal"
+          onDrag={onPreviewDrag}
+          value={previewHeight()}
+          min={PREVIEW_MIN}
+          max={previewMax()}
+          label="Resize preview panel"
+        />
         <div class="preview-box-wrap" style={{ height: `${previewHeight()}px` }}>
           <PreviewBox store={store} />
         </div>

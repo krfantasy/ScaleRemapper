@@ -4,15 +4,57 @@ interface Props {
   onClose: () => void;
 }
 
+// Selector for elements that can receive focus inside the dialog, queried at
+// keydown time so the trap never works from a stale list.
+const FOCUSABLE_SELECTOR =
+  "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), " +
+  "textarea:not([disabled]), summary, [tabindex]:not([tabindex='-1'])";
+
 // Static-content help modal. No store dependency — purely presentational.
-// Escape-to-close + body scroll lock follow the CircleViz.tsx keydown pattern.
+// Escape-to-close + body scroll lock follow the CircleViz.tsx keydown pattern;
+// focus is moved into the dialog on open, Tab is trapped while it is open, and
+// focus is restored to the opener on close (modal dialog pattern).
 export const HelpWidget: Component<Props> = (props) => {
+  let panel: HTMLDivElement | undefined;
+
   onMount(() => {
+    // Remember what was focused before opening (the ❓ button in TopBar) so it
+    // can be restored on close, then move focus into the dialog itself.
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    panel?.focus();
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") props.onClose();
+      if (e.key === "Escape") {
+        props.onClose();
+        return;
+      }
+      if (e.key !== "Tab" || !panel) return;
+      // Trap Tab/Shift+Tab within the dialog: wrap at both ends, and pull
+      // focus back in if it somehow landed outside the modal.
+      const focusables = Array.from(
+        panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+      const escaped = active !== null && !panel.contains(active);
+      if (e.shiftKey) {
+        if (active === first || escaped) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (active === last || escaped) {
+        e.preventDefault();
+        first.focus();
+      }
+      // Mid-list Tab/Shift+Tab falls through to the browser's default move.
     };
     window.addEventListener("keydown", onKey);
     onCleanup(() => window.removeEventListener("keydown", onKey));
+
+    // Give focus back to the opener when the modal unmounts.
+    onCleanup(() => previouslyFocused?.focus());
 
     // Lock background scroll while the modal is open; restore prior value on close.
     const prev = document.body.style.overflow;
@@ -29,7 +71,8 @@ export const HelpWidget: Component<Props> = (props) => {
 
   return (
     <div class="help-backdrop" onClick={onBackdropClick}>
-      <div class="help-panel" role="dialog" aria-modal="true" aria-labelledby="help-title">
+      {/* tabindex=-1 lets the dialog itself take focus on open. */}
+      <div ref={panel} class="help-panel" role="dialog" aria-modal="true" aria-labelledby="help-title" tabindex={-1}>
         <div class="help-header">
           <h2 id="help-title" class="help-title">
             ❓ How Scale Remapper Works

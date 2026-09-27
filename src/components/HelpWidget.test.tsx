@@ -67,3 +67,66 @@ describe("HelpWidget", () => {
     expect(document.body.style.overflow).toBe("scroll");
   });
 });
+
+describe("HelpWidget focus management (modal dialog pattern)", () => {
+  test("moves focus into the dialog on open; dialog has tabindex=-1", () => {
+    render(() => <HelpWidget onClose={() => {}} />);
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.getAttribute("tabindex")).toBe("-1");
+    expect(document.activeElement).toBe(dialog);
+  });
+
+  test("Tab wraps from the last focusable element to the first", () => {
+    render(() => <HelpWidget onClose={() => {}} />);
+    const focusables = screen
+      .getByRole("dialog")
+      .querySelectorAll<HTMLElement>("button, summary");
+    focusables[focusables.length - 1].focus();
+    fireEvent.keyDown(window, { key: "Tab" });
+    expect(document.activeElement).toBe(focusables[0]);
+  });
+
+  test("Shift+Tab wraps from the first focusable element to the last", () => {
+    render(() => <HelpWidget onClose={() => {}} />);
+    const focusables = screen
+      .getByRole("dialog")
+      .querySelectorAll<HTMLElement>("button, summary");
+    focusables[0].focus();
+    const ev = new KeyboardEvent("keydown", {
+      key: "Tab",
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(ev);
+    expect(document.activeElement).toBe(focusables[focusables.length - 1]);
+    expect(ev.defaultPrevented).toBe(true);
+  });
+
+  test("Tab from the middle focusable is left to the browser (no wrap)", () => {
+    render(() => <HelpWidget onClose={() => {}} />);
+    const focusables = screen
+      .getByRole("dialog")
+      .querySelectorAll<HTMLElement>("button, summary");
+    focusables[1].focus();
+    const ev = new KeyboardEvent("keydown", {
+      key: "Tab",
+      bubbles: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(ev);
+    // Not at either end — the trap must not hijack the default move.
+    expect(ev.defaultPrevented).toBe(false);
+  });
+
+  test("restores focus to the previously focused element on close", () => {
+    const opener = document.createElement("button");
+    document.body.appendChild(opener);
+    opener.focus();
+    const { unmount } = render(() => <HelpWidget onClose={() => {}} />);
+    expect(document.activeElement).toBe(screen.getByRole("dialog"));
+    unmount();
+    expect(document.activeElement).toBe(opener);
+    opener.remove();
+  });
+});
