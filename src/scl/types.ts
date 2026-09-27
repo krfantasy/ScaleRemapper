@@ -12,7 +12,7 @@ export interface ScaleDegree {
 export interface SourceScale {
   description: string;
   degrees: ScaleDegree[];     // includes synthetic degree 0 = root (0¢), raw = "1/1"
-  periodRaw: string;          // verbatim text of the LAST entry (the period/equave); "" if scale has only root
+  periodRaw: string;          // verbatim text of the LAST entry (the period/equave)
   isOctaveClosing: boolean;   // |lastCents - 1200| < 0.01
 }
 

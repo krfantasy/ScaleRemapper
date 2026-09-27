@@ -3,7 +3,7 @@ import type { Collision, Mapping, MappingStats, TieResult } from "./types";
 
 /** Signed deviation for a B-degree: (aCents[aDegree] + n·periodA) − bCents[bDegree],
  *  where n is the derived octave displacement. Undefined if unmapped.
- *  Spec: docs/superpowers/specs/2026-07-20-octave-wrap-design.md §3.3 */
+ *  Per the 2026-07-20 octave-wrap design. */
 export function computeDeviation(
   mapping: Mapping,
   aCents: number[],

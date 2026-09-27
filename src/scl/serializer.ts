@@ -42,7 +42,7 @@ function foldCents(cents: number, period: number): number {
  *     Scala entries (e.g. -100 → 1100 for an octave period).
  *   - final entry = scaleB.scale.periodRaw verbatim (B's period/equave)
  *
- * Spec: docs/superpowers/specs/2026-07-20-octave-wrap-design.md §3.5
+ * Per the 2026-07-20 octave-wrap design.
  */
 export function serializeMappingToScl(
   mapping: Mapping,

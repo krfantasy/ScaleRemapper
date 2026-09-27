@@ -7,7 +7,7 @@
  * period, 526¢, is 1203¢ away). The displacement `n` is DERIVED from the
  * assignment + cents, never stored on the Assignment itself.
  *
- * Spec: docs/superpowers/specs/2026-07-20-octave-wrap-design.md §3.1
+ * Per the 2026-07-20 octave-wrap design.
  */
 
 /** Epsilon for equidistance/tie detection in cents. Shared by autoMap's

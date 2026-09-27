@@ -22,7 +22,7 @@ export interface AutoMapResult {
  * - Tie-break: on exact equidistance between two (k, n) pairs, pick the one
  *   with the lower sounded cents (aCents[k] + n*periodA). Deterministic.
  *
- * Spec: docs/superpowers/specs/2026-07-20-octave-wrap-design.md §3.2
+ * Per the 2026-07-20 octave-wrap design.
  */
 export function autoMap(aCents: number[], bCents: number[], periodA: number): AutoMapResult {
   const aLast = aCents.length - 1;
