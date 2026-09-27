@@ -146,6 +146,62 @@ describe("store — mapping ops", () => {
   });
 });
 
+describe("store — connect() degree validation", () => {
+  test("connect with aDegree -1 is silently ignored (no assignment written)", () => {
+    const s = createStore();
+    s.loadScaleA(EDO12_A, "A");
+    s.connect(3, -1);
+    expect(s.mapping().assignments[3]).toBeNull();
+    expect(s.mapping().assignments).toHaveLength(12);
+  });
+
+  test("connect with bDegree -1 is silently ignored", () => {
+    const s = createStore();
+    s.loadScaleA(EDO12_A, "A");
+    s.connect(-1, 5);
+    expect(s.mapping().assignments.every((a) => a === null)).toBe(true);
+    expect(s.mapping().assignments).toHaveLength(12);
+    // JS lets arr[-1] = x attach a "-1" property without touching length or
+    // elements — assert nothing was written there either.
+    expect(s.mapping().assignments[-1]).toBeUndefined();
+  });
+
+  test("connect with aDegree past A's last degree is silently ignored", () => {
+    const s = createStore();
+    s.loadScaleA(EDO12_A, "A"); // aCents has 13 entries; max valid aDegree is 12
+    s.connect(3, 13);
+    expect(s.mapping().assignments[3]).toBeNull();
+  });
+
+  test("connect with bDegree past B's mappable range is silently ignored (mapping length unchanged)", () => {
+    const s = createStore();
+    s.loadScaleA(EDO12_A, "A"); // default 12-EDO B: mapping slots 0..11
+    s.connect(12, 5);
+    expect(s.mapping().assignments).toHaveLength(12);
+    expect(s.mapping().assignments.every((a) => a === null)).toBe(true);
+  });
+
+  test("connect with non-integer degrees is silently ignored", () => {
+    const s = createStore();
+    s.loadScaleA(EDO12_A, "A");
+    s.connect(3, 5.5);
+    s.connect(2.5, 5);
+    expect(s.mapping().assignments.every((a) => a === null)).toBe(true);
+  });
+
+  test("a valid connect still writes the assignment (boundary degrees included)", () => {
+    const s = createStore();
+    s.loadScaleA(EDO12_A, "A");
+    s.connect(3, 5);
+    expect(s.mapping().assignments[3]).toEqual({ bDegree: 3, aDegree: 5 });
+    // bDegree 11 is the last mapping slot; aDegree 12 is A's period degree —
+    // both are in range ([0, len - 1] inclusive on the aDegree side).
+    s.connect(11, 12);
+    expect(s.mapping().assignments[11]).toEqual({ bDegree: 11, aDegree: 12 });
+    expect(s.mapping().assignments).toHaveLength(12);
+  });
+});
+
 describe("store — selection", () => {
   test("select sets {ring, degree}; clearSelection nulls it", () => {
     const s = createStore();

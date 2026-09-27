@@ -118,6 +118,12 @@ export function createStore() {
   }
 
   function connect(bDegree: number, aDegree: number): void {
+    // Silent-ignore contract: connect() runs from pointer event handlers, so
+    // throwing would crash the UI. Reject non-integer / out-of-range degrees
+    // up front — a bad aDegree makes aCents[aDegree] undefined and NaN leaks
+    // into displacedCents; a bad bDegree writes outside B's mappable slots.
+    if (!Number.isInteger(aDegree) || aDegree < 0 || aDegree >= aCents().length) return;
+    if (!Number.isInteger(bDegree) || bDegree < 0 || bDegree >= bMappable()) return;
     setMapping((prev) => {
       const assignments = [...prev.assignments];
       const a: Assignment = { bDegree, aDegree };
