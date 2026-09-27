@@ -37,8 +37,9 @@ engine maps B's grid onto A's pitches. A few examples:
 - **Manual connect** — drag from a dot on one ring to a dot on the other to wire up
   individual degrees. Mix freely with Auto-Map to nudge after the bulk pass.
 - **Concentric-circle visualization** — outer ring = Scale A, inner ring = Scale B, both
-  data-driven for any degree count, with deviation-colored connectors, hover tooltips,
-  tie ghosts, and collapse flagging (when several B-degrees land on the same A-pitch).
+  data-driven for any degree count, with deviation-colored connectors, hover tooltips, a
+  `ties:` count in the stats panel, and collapse flagging (when several B-degrees land on
+  the same A-pitch).
 - **Click-to-audition** — a built-in Web Audio synth (sine, square, triangle, saw) lets
   you A/B a remapped pitch against B's pure pitch.
 - **Live preview** — a read-only panel shows the resulting scale two ways (readable
