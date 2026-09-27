@@ -3,13 +3,9 @@ import type { Store } from "../state/store";
 import { Synth, type Envelope, type Waveform } from "./synth";
 import { displacedCents } from "../mapping/displacement";
 
-export interface AuditionSettings {
+/** Audition controls: the synth envelope (fields inherited from Envelope) + waveform. */
+export interface AuditionSettings extends Envelope {
   waveform: Waveform;       // "sine" | "square" | "triangle" | "sawtooth"
-  attackMs: number;         // 1–2000
-  decayMs: number;          // 1–2000
-  sustainLevel: number;     // 0–1
-  releaseMs: number;        // 1–3000
-  holdMs: number;           // 50–5000
 }
 
 export const DEFAULT_AUDITION_SETTINGS: AuditionSettings = {
@@ -86,23 +82,13 @@ export function createAuditionController(
     });
   }
 
-  function envFromSettings(s: AuditionSettings): Envelope {
-    return {
-      attackMs: s.attackMs,
-      decayMs: s.decayMs,
-      sustainLevel: s.sustainLevel,
-      releaseMs: s.releaseMs,
-      holdMs: s.holdMs,
-    };
-  }
-
   function playDot(ring: "A" | "B", degree: number): void {
     void synth.resume();
     const s = settings();
     if (ring === "A") {
       const cents = store.aCents()[degree];
       if (cents === undefined) return;
-      synth.playNote(cents, envFromSettings(s), s.waveform);
+      synth.playNote(cents, s, s.waveform);
       return;
     }
     // ring === "B": remapped A-pitch (with octave displacement) if mapped,
@@ -115,7 +101,7 @@ export function createAuditionController(
       ? displacedCents(assignment.aDegree, degree, aCents, bCents, periodA)
       : bCents[degree];
     if (cents === undefined) return;
-    synth.playNote(cents, envFromSettings(s), s.waveform);
+    synth.playNote(cents, s, s.waveform);
   }
 
   return {

@@ -2,13 +2,17 @@ import { centsToFrequency } from "../utils/cents";
 
 export type Waveform = "sine" | "square" | "triangle" | "sawtooth";
 
-/** User-tunable envelope shape. Gain is scaled relative to PEAK_GAIN. */
+/**
+ * User-tunable envelope shape — the single declaration of these five numeric
+ * fields. AuditionSettings (audition-controller.ts) extends this, so the two
+ * can never drift. Gain is scaled relative to PEAK_GAIN.
+ */
 export interface Envelope {
-  attackMs: number;
-  decayMs: number;
+  attackMs: number;       // 1–2000
+  decayMs: number;        // 1–2000
   sustainLevel: number;   // 0–1, fraction of peak
-  releaseMs: number;
-  holdMs: number;
+  releaseMs: number;      // 1–3000
+  holdMs: number;         // 50–5000
 }
 
 /** Internal peak gain (not user-tunable). Matches the previous hardcoded amplitude. */
