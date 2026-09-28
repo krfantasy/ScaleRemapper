@@ -141,6 +141,7 @@ export function createStore() {
     // throwing would crash the UI. Reject non-integer / out-of-range degrees
     // up front — a bad aDegree makes aCents[aDegree] undefined and NaN leaks
     // into displacedCents; a bad bDegree writes outside B's mappable slots.
+    // disconnect() below shares this contract.
     if (!Number.isInteger(aDegree) || aDegree < 0 || aDegree >= aCents().length) return;
     if (!Number.isInteger(bDegree) || bDegree < 0 || bDegree >= bMappable()) return;
     setMapping((prev) => {
@@ -152,6 +153,12 @@ export function createStore() {
   }
 
   function disconnect(bDegree: number): void {
+    // Shares connect()'s silent-ignore contract: assignments has exactly
+    // bMappable() slots, so an out-of-range bDegree must return early — a
+    // negative index would attach a stray "-1" property, and bDegree ===
+    // length would pass the === null check (it reads undefined) and extend
+    // the array with sparse slots, corrupting the length-derived counts.
+    if (!Number.isInteger(bDegree) || bDegree < 0 || bDegree >= bMappable()) return;
     setMapping((prev) => {
       if (prev.assignments[bDegree] === null) return prev;
       const assignments = [...prev.assignments];

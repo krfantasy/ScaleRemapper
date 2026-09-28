@@ -202,6 +202,39 @@ describe("store — connect() degree validation", () => {
   });
 });
 
+describe("store — disconnect() degree validation", () => {
+  test("disconnect with bDegree -1 is silently ignored (no stray property, length unchanged)", () => {
+    const s = createStore();
+    s.loadScaleA(EDO12_A, "A");
+    s.disconnect(-1);
+    // arr[-1] = null would attach a "-1" property without touching length —
+    // assert neither happened.
+    expect(s.mapping().assignments[-1]).toBeUndefined();
+    expect(s.mapping().assignments).toHaveLength(12);
+  });
+
+  test("disconnect with bDegree at bMappable() does not extend the array", () => {
+    const s = createStore();
+    s.loadScaleA(EDO12_A, "A");
+    // Default 12-EDO B: assignments has exactly 12 slots (0..11). The === null
+    // check reads undefined at index 12, passes, and the write would extend the
+    // array to 13 sparse slots — corrupting mappedCount/unmappedCount, which
+    // deviation.ts derives from assignments.length.
+    s.disconnect(12);
+    expect(s.mapping().assignments).toHaveLength(12);
+    expect(s.mapping().assignments.every((a) => a === null)).toBe(true);
+  });
+
+  test("a valid disconnect still nulls the slot", () => {
+    const s = createStore();
+    s.loadScaleA(EDO12_A, "A");
+    s.connect(3, 5);
+    s.disconnect(3);
+    expect(s.mapping().assignments[3]).toBeNull();
+    expect(s.mapping().assignments).toHaveLength(12);
+  });
+});
+
 describe("store — selection", () => {
   test("select sets {ring, degree}; clearSelection nulls it", () => {
     const s = createStore();
