@@ -1,5 +1,6 @@
 import { describe, test, expect, vi } from "vitest";
 import { render, fireEvent } from "@solidjs/testing-library";
+import { createSignal } from "solid-js";
 import { Splitter } from "./Splitter";
 
 // Dispatch a cancelable bubbling keydown and return the event so tests can
@@ -90,14 +91,29 @@ describe("Splitter keyboard resize (ARIA separator pattern)", () => {
 	});
 
 	test("Home jumps to the minimum, End to the maximum", () => {
-		const onDrag = vi.fn();
-		render(() => <Splitter {...baseProps} onDrag={onDrag} />);
+		// Assert through a real consumer model: both App.tsx handlers apply
+		// `value = clamp(value − delta)` with the same min/max as here.
+		const { min, max } = baseProps;
+		const clamp = (v: number) => Math.max(min, Math.min(max, v));
+		const [value, setValue] = createSignal(baseProps.value); // 260
+		render(() => (
+			<Splitter
+				{...baseProps}
+				value={value()}
+				onDrag={(delta) => setValue((v) => clamp(v - delta))}
+			/>
+		));
 		const handle = document.querySelector(".splitter") as HTMLElement;
 		let ev = fireKey(handle, "Home");
-		expect(onDrag).toHaveBeenCalledWith(-100); // 160 − 260
+		expect(value()).toBe(min); // 260 → 160
 		expect(ev.defaultPrevented).toBe(true);
 		ev = fireKey(handle, "End");
-		expect(onDrag).toHaveBeenLastCalledWith(300); // 560 − 260
+		expect(value()).toBe(max); // 160 → 560
+		expect(ev.defaultPrevented).toBe(true);
+		// End straight from the midpoint: 260 → 560, not clamped down to min.
+		setValue(baseProps.value);
+		ev = fireKey(handle, "End");
+		expect(value()).toBe(max);
 		expect(ev.defaultPrevented).toBe(true);
 	});
 

@@ -60,9 +60,11 @@ export const Splitter: Component<Props> = (props) => {
   // handle right/down, which grows the left/top pane and shrinks the right/bottom
   // panel (App.tsx negates the delta for exactly this geometry). So Right/Down
   // send +step and Left/Up send −step — keys behave like dragging the handle in
-  // that direction. Home/End snap to the range bounds. Clamping stays with the
-  // consumer (same code path as pointer drag); preventDefault stops the page
-  // from scrolling on the keys we handle.
+  // that direction. Home/End snap to the range bounds under the consumer's
+  // `clamp(value − delta)` contract: Home sends value − min (positive → shrinks
+  // to min) and End sends value − max (negative → grows to max). Clamping stays
+  // with the consumer (same code path as pointer drag); preventDefault stops the
+  // page from scrolling on the keys we handle.
   const onKeyDown = (e: KeyboardEvent) => {
     const step = ((props.max - props.min) * KEY_STEP_PERCENT) / 100;
     let delta: number;
@@ -76,10 +78,10 @@ export const Splitter: Component<Props> = (props) => {
         delta = step;
         break;
       case "Home":
-        delta = props.min - props.value;
+        delta = props.value - props.min;
         break;
       case "End":
-        delta = props.max - props.value;
+        delta = props.value - props.max;
         break;
       default:
         return;
