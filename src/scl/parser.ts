@@ -78,7 +78,12 @@ function parseEntry(entry: string): number {
   if (t.includes(".")) {
     // Cents value, possibly with the conventional trailing dot(s).
     const v = parseFloat(t.replace(/\.+$/, ""));
-    if (Number.isNaN(v)) throw new Error(`Cannot parse cents entry: "${entry}"`);
+    // Reject negative (descending — invalid in an ascending pitch space) and
+    // non-finite values (e.g. "1e999." → Infinity) like other malformed
+    // entries. Exactly 0 ("0.0") stays accepted: degenerate but harmless.
+    if (Number.isNaN(v) || v < 0 || !Number.isFinite(v)) {
+      throw new Error(`Cannot parse cents entry: "${entry}"`);
+    }
     return v;
   }
   if (t.includes("/")) {
@@ -88,16 +93,31 @@ function parseEntry(entry: string): number {
     const den = parseFloat(parts[1]);
     // Non-positive numerators/denominators would yield -Infinity/NaN from
     // ratioToCents (0/1, -3/2, 3/-2), so reject them like other malformed
-    // entries. Scala ratios are positive integers n/d with d != 0.
-    if (Number.isNaN(num) || Number.isNaN(den) || num <= 0 || den <= 0) {
+    // entries. Scala ratios are positive integers n/d with d != 0. Exponent
+    // forms ("1e999/1") parse to Infinity, which slips past the <= 0 checks,
+    // so non-finite parts are rejected too.
+    if (
+      Number.isNaN(num) || Number.isNaN(den) || num <= 0 || den <= 0 ||
+      !Number.isFinite(num) || !Number.isFinite(den)
+    ) {
       throw new Error(`Cannot parse ratio entry: "${entry}"`);
     }
-    return ratioToCents(num, den);
+    const cents = ratioToCents(num, den);
+    // Finite parts can still overflow to Infinity via num/den (1e308/1e-308);
+    // Infinity cents must not leak downstream any more than NaN may.
+    if (!Number.isFinite(cents)) {
+      throw new Error(`Cannot parse ratio entry: "${entry}"`);
+    }
+    return cents;
   }
   // Bare integer → ratio n/1.
   const v = parseFloat(t);
-  if (Number.isNaN(v) || v <= 0) {
+  if (Number.isNaN(v) || v <= 0 || !Number.isFinite(v)) {
     throw new Error(`Cannot parse entry: "${entry}"`);
   }
-  return ratioToCents(v, 1);
+  const cents = ratioToCents(v, 1);
+  if (!Number.isFinite(cents)) {
+    throw new Error(`Cannot parse entry: "${entry}"`);
+  }
+  return cents;
 }

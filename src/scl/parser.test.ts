@@ -169,3 +169,50 @@ describe("parseScl - non-positive entries", () => {
     expect(scale.isOctaveClosing).toBe(true);
   });
 });
+
+describe("parseScl - negative and non-finite entries", () => {
+  test("throws on negative cents (-100.0)", () => {
+    // Ascending pitch space: a degree below the root is invalid, and it would
+    // poison deviation mapping silently.
+    expect(() => parseScl(`t\n1\n-100.0`)).toThrow(/Cannot parse cents entry/i);
+  });
+
+  test("throws on non-finite cents (1e999.)", () => {
+    // parseFloat("1e999") = Infinity; must not flow into downstream memos.
+    expect(() => parseScl(`t\n1\n1e999.`)).toThrow(/Cannot parse cents entry/i);
+  });
+
+  test("throws on non-finite ratio numerator (1e999/1)", () => {
+    // num = Infinity passes the num <= 0 check, so guard non-finite inputs
+    // and the ratioToCents result itself.
+    expect(() => parseScl(`t\n1\n1e999/1`)).toThrow(/Cannot parse ratio entry/i);
+  });
+
+  test("throws on non-finite bare integer (1e999)", () => {
+    expect(() => parseScl(`t\n1\n1e999`)).toThrow(/Cannot parse entry/i);
+  });
+
+  test("throws when finite ratio inputs overflow to Infinity (1e308/1e-308)", () => {
+    // num/den = Infinity although both parts are finite — the ratioToCents
+    // result must be checked, not just the inputs.
+    expect(() => parseScl(`t\n1\n1e308/1e-308`)).toThrow(/Cannot parse ratio entry/i);
+  });
+
+  test("still parses trailing-dot cents (100.)", () => {
+    const scale = parseScl(`t\n1\n100.`);
+    expect(scale.degrees[1].cents).toBeCloseTo(100, 5);
+  });
+
+  test("still parses cents of exactly 0 (0.0 stays accepted)", () => {
+    // Degenerate but harmless; rejecting it is a bigger behavior change
+    // than this fix asks for.
+    const scale = parseScl(`t\n1\n0.0`);
+    expect(scale.degrees[1].cents).toBe(0);
+  });
+
+  test("still parses ordinary ratios and bare integers unchanged", () => {
+    const scale = parseScl(`t\n2\n3/2\n2`);
+    expect(scale.degrees[1].cents).toBeCloseTo(701.955, 2);
+    expect(scale.degrees[2].cents).toBeCloseTo(1200, 5);
+  });
+});
